@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 블로그 포스팅 전문가</title>
+    <link rel="stylesheet" href="./index.css?v=2.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+    .time-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.98);
+        padding: 30px 35px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        display: none;
+        max-width: 350px;
+        animation: slideIn 0.5s ease;
+    }
+    
+    .time-message.active {
+        display: block;
+    }
+    
+    .time-message .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+        background: none;
+        border: none;
+        padding: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .time-message .close-btn:hover {
+        color: #333;
+        transform: scale(1.1);
+    }
+    
+    .time-message h3 {
+        margin: 0 0 15px 0;
+        font-size: 21px;
+        line-height: 1.4;
+        text-align: center;
+    }
+    
+    .time-message p {
+        font-size: 17px;
+        line-height: 1.8;
+        margin: 0;
+        color: #555;
+        text-align: center;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    </style>
+    <!-- Babel Standalone for in-browser TSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^0.14.0",
+          "docx": "https://esm.sh/docx@8.5.0",
+          "mammoth": "https://esm.sh/mammoth@1.7.2"
+        }
+      }
+    </script>
+</head>
+<body>
+    <main>
+        <form id="prompt-form" aria-labelledby="form-heading">
+            <header>
+                <h1>✍️ 요식업 블로그 포스팅 AI <span style="font-size: 0.6em; color: #888;">(v4.1.0)</span></h1>
+                <p>매장 정보와 사진을 입력하여 고객을 사로잡는 네이버 블로그 포스트를 생성하세요.</p>
+            </header>
+            <h2 id="form-heading" class="sr-only">블로그 포스트 정보</h2>
+            <div class="form-group api-key-group">
+                <label for="api-key">Gemini API 키</label>
+                <div style="display: flex; gap: 10px;">
+                    <input type="password" id="api-key" name="api-key" placeholder="기본 API 키 사용 중" style="flex: 1;">
+                    <button type="button" id="edit-api-key" style="padding: 8px 16px; background: #ffc107; border: none; border-radius: 5px; cursor: pointer;">수정</button>
+                </div>
+                <p class="form-hint">기본 API 키가 설정되어 있습니다. 필요시 수정 버튼을 눌러 변경할 수 있습니다.</p>
+            </div>
+            <div class="form-group">
+                <label for="store-name">매장 이름</label>
+                <input type="text" id="store-name" name="store-name" placeholder="예: 샤슬릭 마산점" required>
+            </div>
+            <div class="form-group">
+                <label for="post-title">블로그 포스트 제목</label>
+                <input type="text" id="post-title" name="post-title" placeholder="예: 진해 고기 맛집 양고기 숄더랙 샤슬릭 진해점" required>
+            </div>
+            <div class="form-group">
+                <label for="keywords">키워드 (쉼표로 구분)</label>
+                <input type="text" id="keywords" name="keywords" placeholder="예: 진해 고기 맛집" required>
+            </div>
+            <div class="form-group-inline">
+                <div class="form-group">
+                    <label for="min-chars">최소 글자 수</label>
+                    <input type="number" id="min-chars" name="min-chars" value="1700" required>
+                </div>
+                <div class="form-group">
+                    <label for="max-chars">최대 글자 수</label>
+                    <input type="number" id="max-chars" name="max-chars" value="1800" required>
+                </div>
+            </div>
+             <div class="form-group">
+                <label for="store-info">매장 정보</label>
+                <textarea id="store-info" name="store-info" rows="4" placeholder="AI가 참고할 매장 정보를 입력해주세요. (위치, 영업시간, 주차, 특징 등)"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="ordered-menu-upload">주문한 메뉴 (.txt 파일)</label>
+                <input type="file" id="ordered-menu-upload" accept=".txt">
+                <p class="form-hint">리뷰할 메뉴 목록이 담긴 .txt 파일을 업로드해주세요.</p>
+            </div>
+             <div class="form-group">
+                <label for="sample-upload">샘플 원고 (.docx, 선택 사항)</label>
+                <input type="file" id="sample-upload" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                <p class="form-hint">기존 원고(.docx)를 업로드하면 AI가 해당 스타일을 참고하여 글을 작성합니다.</p>
+            </div>
+            <div class="form-group">
+                <label for="image-upload">이미지 업로드 (최대 20개)</label>
+                <div id="drop-zone" role="button" tabindex="0" aria-label="이곳에 이미지를 드래그하거나 클릭하여 파일을 선택하세요">
+                    <p>이곳에 이미지를 드래그하거나 클릭하여 파일을 선택하세요.</p>
+                    <input type="file" id="image-upload" multiple accept="image/*" hidden>
+                </div>
+                <div id="image-preview" class="image-preview-grid"></div>
+            </div>
+            <button type="submit" id="generate-button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 24px; border: none; border-radius: 8px; background: linear-gradient(45deg, #667eea, #764ba2); color: white; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 10px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span class="button-text">포스트 생성하기</span>
+            </button>
+        </form>
+
+        <section id="result-section" aria-live="polite">
+            <h2>생성된 포스트 (수정 가능)</h2>
+            <div class="result-header">
+                <span id="char-count" aria-label="공백 제외 한글 글자 수">한글(공백제외): 0</span>
+                <div class="button-group">
+                    <button id="copy-button" title="클립보드로 복사" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        <span>복사</span>
+                    </button>
+                    <button id="export-button" title="Word 파일로 내보내기" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M220-200h520v-240H220v240Zm260-340L280-740h120v-140h160v140h120L480-540ZM140-120q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h400l240 240v340q0 24-18 42t-42 18H140Z"/></svg>
+                        <span>내보내기</span>
+                    </button>
+                </div>
+            </div>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>AI가 원고를 작성하고 있습니다... 잠시만 기다려주세요.</p>
+            </div>
+            <div id="result" contenteditable="true" role="textbox" aria-multiline="true"></div>
+        </section>
+    </main>
+    
+    <!-- 최상단 이동 버튼 -->
+    <button id="scrollTopBtn" onclick="scrollToTop()" aria-label="페이지 최상단으로 이동" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: 40px; height: 40px; background: #666; color: white; border: none; border-radius: 50%; cursor: pointer; opacity: 0; visibility: hidden; z-index: 9999; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="18 15 12 9 6 15"></polyline>
+        </svg>
+    </button>
+    
+    <!-- Babel로 TypeScript 처리 -->
+    <script type="text/babel" data-presets="typescript" data-type="module" src="./index.tsx"></script>
+    
+    <!-- 스크롤 버튼 스크립트 -->
+    <script>
+        // 페이지 로드 후 실행
+        document.addEventListener('DOMContentLoaded', function() {
+            // 스크롤 이벤트 처리
+            window.addEventListener('scroll', function() {
+                const btn = document.getElementById("scrollTopBtn");
+                if (btn) {
+                    if (window.pageYOffset > 100 || document.documentElement.scrollTop > 100) {
+                        btn.style.opacity = '1';
+                        btn.style.visibility = 'visible';
+                    } else {
+                        btn.style.opacity = '0';
+                        btn.style.visibility = 'hidden';
+                    }
+                }
+            });
+            
+            // 호버 효과
+            const btn = document.getElementById("scrollTopBtn");
+            if (btn) {
+                btn.addEventListener('mouseenter', function() {
+                    this.style.background = '#888';
+                    this.style.transform = 'translateX(-50%) translateY(-2px)';
+                });
+                btn.addEventListener('mouseleave', function() {
+                    this.style.background = '#666';
+                    this.style.transform = 'translateX(-50%)';
+                });
+            }
+        });
+
+        // 최상단으로 스크롤
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+        
+        // 시간대별 특별 메시지
+        setTimeout(() => {
+            const now = new Date();
+            const hour = now.getHours();
+            const timeMessage = document.getElementById('timeMessage');
+            const timeMessageTitle = document.getElementById('timeMessageTitle');
+            const timeMessageText = document.getElementById('timeMessageText');
+            
+            if ((hour === 18 && now.getMinutes() >= 50) || hour >= 19 || hour < 4) {
+                timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🌙</span>야근 알림';
+                timeMessageText.innerHTML = '야근하시나요?<br>건강 조심하세요!<br>스트레칭하고<br>눈도 쉬어주세요.';
+                timeMessage.classList.add('active');
+            } else if (hour === 12) {
+                timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🍜</span>점심시간';
+                timeMessageText.innerHTML = '곧 점심시간이네요!<br>맛있는 거 드세요!<br>오후도 화이팅!';
+                timeMessage.classList.add('active');
+            }
+        }, 100);
+    </script>
+    
+    <!-- 시간대별 메시지 -->
+    <div class="time-message" id="timeMessage">
+        <button class="close-btn" onclick="document.getElementById('timeMessage').classList.remove('active')">×</button>
+        <h3 id="timeMessageTitle"></h3>
+        <p id="timeMessageText"></p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>키워드 분석 보고서 생성기 - 서버 버전</title>
+    <style>
+        /* 비밀번호 화면 스타일 */
+        #passwordScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #6c63ff 0%, #4834d4 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+        
+        .password-container {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .password-container h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        
+        .password-container .lock-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .password-input-group {
+            margin-bottom: 20px;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s ease;
+            text-align: center;
+        }
+        
+        .password-input:focus {
+            border-color: #6c63ff;
+        }
+        
+        .password-submit {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #6c63ff 0%, #4834d4 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .password-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(108, 99, 255, 0.4);
+        }
+        
+        .password-error {
+            color: #e74c3c;
+            margin-top: 15px;
+            font-size: 0.95em;
+            display: none;
+        }
+        
+        .password-error.show {
+            display: block;
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        #mainContent {
+            display: none;
+        }
+        
+        #mainContent.authenticated {
+            display: block;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f0f2f5 0%, #e8eaf6 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6c63ff 0%, #4834d4 100%);
+            padding: 40px;
+            text-align: center;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 30px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #6c63ff;
+            box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+        }
+
+        .form-group textarea {
+            width: 100%;
+            min-height: 300px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #6c63ff;
+            box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+        }
+
+        .help-text {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+            line-height: 1.5;
+        }
+
+        .sample-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #495057;
+            border-left: 4px solid #6c63ff;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #6c63ff 0%, #4834d4 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(108, 99, 255, 0.25);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .preview-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stats-preview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-item .number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6c63ff;
+        }
+
+        .stat-item .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .result-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #e8f5e8;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .duplicate-warning {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            border-left: 4px solid #ffc107;
+        }
+
+        .result-section h3 {
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .file-link {
+            color: #6c63ff;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .file-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* 팝업 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 50px auto;
+            padding: 0;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s;
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #6c63ff 0%, #4834d4 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+        }
+        
+        .close-btn:hover {
+            transform: rotate(90deg);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(80vh - 100px);
+        }
+        
+        .report-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .report-item:hover {
+            background: white;
+            box-shadow: 0 4px 12px rgba(108, 99, 255, 0.1);
+            transform: translateX(5px);
+        }
+        
+        .report-info {
+            flex: 1;
+        }
+        
+        .report-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        
+        .report-date {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        
+        .report-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .copy-btn {
+            background: #28a745;
+            color: white;
+        }
+        
+        .copy-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        
+        .view-btn {
+            background: #6c63ff;
+            color: white;
+        }
+        
+        .view-btn:hover {
+            background: #4834d4;
+            transform: translateY(-2px);
+        }
+        
+        .view-reports-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .view-reports-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(108, 99, 255, 0.25);
+        }
+        
+        .empty-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 비밀번호 화면 -->
+    <div id="passwordScreen">
+        <div class="password-container">
+            <div class="lock-icon">🔒</div>
+            <h2><strong>접근 권한 필요</strong></h2>
+            <div class="password-input-group">
+                <input type="password" 
+                       id="passwordInput" 
+                       class="password-input" 
+                       placeholder="비밀번호를 입력하세요"
+                       autocomplete="off">
+            </div>
+            <button id="passwordSubmit" class="password-submit">확인</button>
+            <div id="passwordError" class="password-error">
+                비밀번호가 일치하지 않습니다.
+            </div>
+        </div>
+    </div>
+    
+    <!-- 메인 콘텐츠 (비밀번호 인증 후 표시) -->
+    <div id="mainContent">
+    <div class="container">
+        <div class="header">
+            <h1>키워드 분석 보고서 생성기</h1>
+            <p>고객사 정보와 키워드 데이터를 입력하여 전문 보고서를 생성하세요</p>
+        </div>
+        
+        <!-- 기존 데이터 확인 버튼 추가 -->
+        <div style="text-align: center; margin-top: 20px;">
+            <button type="button" class="view-reports-btn" onclick="showReportsList()">
+                📂 기존 보고서 확인
+            </button>
+        </div>
+
+        <div class="form-container">
+            <form id="reportForm" action="generate_report.php" method="POST">
+                <div class="form-group">
+                    <label for="clientName">고객사명 *</label>
+                    <input type="text" id="clientName" name="clientName" required placeholder="예: 제주미향 중문본점">
+                    <div class="help-text">보고서에 표시될 고객사명을 입력하세요</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reportDate">날짜</label>
+                    <input type="date" id="reportDate" name="reportDate">
+                    <div class="help-text">미입력시 오늘 날짜로 자동 설정됩니다</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="keywordData">키워드 데이터 *</label>
+                    <textarea id="keywordData" name="keywordData" required 
+                              placeholder="키워드와 검색량을 탭 또는 공백으로 구분하여 입력하세요"></textarea>
+                    <div class="help-text">
+                        엑셀의 키워드와 검색량 복사본을 그대로 붙여서 사용하세요<br>
+                        예시: 1번키워드 15,000<br>
+                        콤마(,)가 포함된 숫자도 자동으로 처리됩니다
+                    </div>
+                    <div class="sample-data">1번키워드	15,000
+2번키워드	11,000
+3번키워드	6,000
+4번키워드	5,500
+5번키워드	4,200</div>
+                </div>
+
+                <button type="button" class="generate-btn" onclick="previewData()">데이터 미리보기</button>
+                <button type="submit" class="generate-btn" id="generateBtn" disabled>보고서 생성하기</button>
+            </form>
+
+            <div id="previewSection" class="preview-section" style="display: none;">
+                <h3>데이터 미리보기</h3>
+                <div id="statsPreview" class="stats-preview"></div>
+                <p id="previewInfo" style="margin-top: 15px; color: #666;"></p>
+            </div>
+
+            <div id="resultSection" class="result-section" style="display: none;">
+                <h3>보고서 생성 완료!</h3>
+                <p>생성된 보고서 링크: <a id="reportLink" class="file-link" target="_blank"></a></p>
+                <p>파일 위치: <span id="filePath"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let parsedKeywords = [];
+
+        // 오늘 날짜를 기본값으로 설정
+        document.getElementById('reportDate').valueAsDate = new Date();
+
+        function parseKeywordData(rawData) {
+            const lines = rawData.trim().split('\n').filter(line => line.trim());
+            const keywords = [];
+            const seenKeywords = new Set(); // 중복 체크용 Set
+            
+            for (let line of lines) {
+                // 탭, 공백, 여러 공백으로 분리 시도
+                let parts = line.trim().split(/\t+|\s{2,}|\s+/);
+                
+                if (parts.length >= 2) {
+                    const keyword = parts[0].trim();
+                    const volumeStr = parts[parts.length - 1].trim();
+                    
+                    // 숫자에서 콤마 제거 후 파싱
+                    const volume = parseInt(volumeStr.replace(/,/g, ''));
+                    
+                    // 중복 체크: 이미 추가된 키워드인지 확인
+                    if (keyword && !isNaN(volume) && !seenKeywords.has(keyword)) {
+                        keywords.push({ keyword, volume });
+                        seenKeywords.add(keyword); // Set에 추가하여 중복 방지
+                    }
+                }
+            }
+            
+            // 중복 제거 알림 (선택사항)
+            const duplicatesCount = lines.length - keywords.length;
+            if (duplicatesCount > 0) {
+                console.log(`${duplicatesCount}개의 중복 키워드가 제거되었습니다.`);
+            }
+            
+            // 검색량 기준으로 내림차순 정렬
+            return keywords.sort((a, b) => b.volume - a.volume);
+        }
+
+        function calculateStats(keywords) {
+            if (keywords.length === 0) return {};
+            
+            const totalKeywords = keywords.length;
+            const totalVolume = keywords.reduce((sum, k) => sum + k.volume, 0);
+            const avgVolume = Math.round(totalVolume / totalKeywords);
+            const maxVolume = Math.max(...keywords.map(k => k.volume));
+            
+            return { totalKeywords, totalVolume, avgVolume, maxVolume };
+        }
+
+        function previewData() {
+            const rawData = document.getElementById('keywordData').value;
+            
+            if (!rawData.trim()) {
+                alert('키워드 데이터를 입력해주세요.');
+                return;
+            }
+            
+            // 원본 라인 수 계산 (중복 포함)
+            const originalLines = rawData.trim().split('\n').filter(line => line.trim()).length;
+            
+            parsedKeywords = parseKeywordData(rawData);
+            
+            if (parsedKeywords.length === 0) {
+                alert('올바른 키워드 데이터 형식이 아닙니다.\n키워드와 검색량을 탭 또는 공백으로 구분해주세요.');
+                return;
+            }
+            
+            // 중복 제거 알림
+            const duplicatesRemoved = originalLines - parsedKeywords.length;
+            if (duplicatesRemoved > 0) {
+                console.log(`✅ ${duplicatesRemoved}개의 중복 키워드가 자동으로 제거되었습니다.`);
+            }
+            
+            // 통계 미리보기
+            const stats = calculateStats(parsedKeywords);
+            
+            // 중복 제거 메시지 포함
+            let infoMessage = `총 ${parsedKeywords.length}개의 키워드가 파싱되었습니다.`;
+            let duplicateAlert = '';
+            
+            if (duplicatesRemoved > 0) {
+                infoMessage += ` (${duplicatesRemoved}개의 중복 제거)`;
+                duplicateAlert = `<div class="duplicate-warning">⚠️ ${duplicatesRemoved}개의 중복 키워드가 자동으로 제거되었습니다. 각 키워드는 1개씩만 포함됩니다.</div>`;
+            }
+            
+            const statsHtml = `
+                <div class="stat-item">
+                    <div class="number">${stats.totalKeywords.toLocaleString()}</div>
+                    <div class="label">총 키워드 수</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number">${stats.totalVolume.toLocaleString()}</div>
+                    <div class="label">총 검색량</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number">${stats.avgVolume.toLocaleString()}</div>
+                    <div class="label">평균 검색량</div>
+                </div>
+                <div class="stat-item">
+                    <div class="number">${stats.maxVolume.toLocaleString()}</div>
+                    <div class="label">최고 검색량</div>
+                </div>
+            `;
+            document.getElementById('statsPreview').innerHTML = statsHtml;
+            document.getElementById('previewInfo').innerHTML = infoMessage + duplicateAlert;
+            
+            // 미리보기 섹션 표시
+            document.getElementById('previewSection').style.display = 'block';
+            document.getElementById('generateBtn').disabled = false;
+        }
+
+        // 폼 제출 처리 (서버로 전송)
+        document.getElementById('reportForm').addEventListener('submit', function(e) {
+            if (parsedKeywords.length === 0) {
+                e.preventDefault();
+                alert('먼저 데이터 미리보기를 실행해주세요.');
+                return;
+            }
+            
+            const clientName = document.getElementById('clientName').value.trim();
+            
+            if (!clientName) {
+                e.preventDefault();
+                alert('고객사명을 입력해주세요.');
+                return;
+            }
+            
+            // 중복 제거된 데이터로 textarea 값 교체
+            // parsedKeywords 배열을 텍스트 형식으로 변환
+            const cleanedData = parsedKeywords
+                .map(item => `${item.keyword}\t${item.volume.toLocaleString()}`)
+                .join('\n');
+            
+            // textarea 값을 중복 제거된 데이터로 교체
+            document.getElementById('keywordData').value = cleanedData;
+            
+            // 버튼 상태 변경
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('generateBtn').textContent = '보고서 생성 중...';
+        });
+        
+        // 기존 보고서 목록 표시
+        function showReportsList() {
+            const modal = document.getElementById('reportsModal');
+            modal.style.display = 'block';
+            
+            // 보고서 목록 가져오기
+            fetch('get_reports.php')
+                .then(response => response.json())
+                .then(data => {
+                    const listContainer = document.getElementById('reportsList');
+                    
+                    if (data.success && data.files.length > 0) {
+                        let html = '<ul class="report-list">';
+                        
+                        data.files.forEach(file => {
+                            // 파일명에서 정보 추출
+                            const fileName = file.name;
+                            const fileUrl = file.url;
+                            const modifiedDate = file.modified_date;
+                            
+                            html += `
+                                <li class="report-item">
+                                    <div class="report-info">
+                                        <div class="report-name">${fileName}</div>
+                                        <div class="report-date">수정일: ${modifiedDate}</div>
+                                    </div>
+                                    <div class="report-actions">
+                                        <button class="action-btn copy-btn" onclick="copyToClipboard('${window.location.origin}${window.location.pathname.replace('index.html', '')}${fileUrl}')">
+                                            📋 링크 복사
+                                        </button>
+                                        <button class="action-btn view-btn" onclick="window.open('${fileUrl}', '_blank')">
+                                            📄 보기
+                                        </button>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        
+                        html += '</ul>';
+                        listContainer.innerHTML = html;
+                    } else {
+                        listContainer.innerHTML = `
+                            <div class="empty-message">
+                                <p style="font-size: 3em;">📭</p>
+                                <p>생성된 보고서가 없습니다.</p>
+                                <p style="margin-top: 10px; color: #999;">새로운 보고서를 생성해보세요!</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('reportsList').innerHTML = `
+                        <div class="empty-message">
+                            <p style="color: red;">오류가 발생했습니다.</p>
+                            <p style="margin-top: 10px; color: #666;">${error.message}</p>
+                        </div>
+                    `;
+                });
+        }
+        
+        // 클립보드 복사 기능
+        function copyToClipboard(text) {
+            // textarea 생성 방법 (구형 브라우저 지원)
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            
+            // 복사 완료 메시지
+            alert('링크가 클립보드에 복사되었습니다!\n' + text);
+        }
+        
+        // 모달 닫기
+        function closeModal() {
+            document.getElementById('reportsModal').style.display = 'none';
+        }
+        
+        // 모달 외부 클릭시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('reportsModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+    </script>
+    
+    <!-- 보고서 목록 모달 -->
+    <div id="reportsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📁 생성된 보고서 목록</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="reportsList">
+                    <div style="text-align: center; padding: 20px;">
+                        <p>보고서 목록을 불러오는 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- mainContent 종료 -->
+    
+    <!-- 비밀번호 인증 스크립트 -->
+    <script>
+        // 비밀번호 설정
+        const CORRECT_PASSWORD = 'mincom0202';
+        
+        // 엔터키 이벤트 처리
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+        
+        // 버튼 클릭 이벤트 처리
+        document.getElementById('passwordSubmit').addEventListener('click', checkPassword);
+        
+        // 비밀번호 확인 함수
+        function checkPassword() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            if (inputPassword === CORRECT_PASSWORD) {
+                // 비밀번호 맞음
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContent').classList.add('authenticated');
+                
+                // localStorage에 인증 상태 영구 저장 (메인페이지와 동일한 키 사용)
+                localStorage.setItem('mincom_authenticated', 'true');
+                localStorage.setItem('mincom_auth_date', new Date().toISOString());
+            } else {
+                // 비밀번호 틀림
+                errorDiv.classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+                
+                // 3초 후 에러 메시지 숨기기
+                setTimeout(() => {
+                    errorDiv.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        // 페이지 로드 시 localStorage 체크 (메인페이지와 동일한 키 확인)
+        window.addEventListener('DOMContentLoaded', function() {
+            // localStorage에 인증 정보가 있으면 바로 접속
+            if (localStorage.getItem('mincom_authenticated') === 'true') {
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContent').classList.add('authenticated');
+            } else {
+                // 비밀번호 입력 필드에 포커스
+                document.getElementById('passwordInput').focus();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{
+  "version": "3.0",
+  "timestamp": "2025-09-23T06:38:59.969Z",
+  "configs": [
+    {
+      "customerId": "3472303",
+      "accessLicense": "010000000020edc3f4dbf3462ccf528a370acfa00bc9d706a5980f686a43c95785030e8d05",
+      "secretKey": "AQAAAAAg7cP02/NGLM9SijcKz6AL5MEMiS29o5U/cJUbTCiXMA==",
+      "name": "API 1"
+    },
+    {
+      "customerId": "2889444",
+      "accessLicense": "010000000025b0bb464a4c592b13975af925b4c572b5e6135a5c45fe9e13d453b6a1b274db",
+      "secretKey": "AQAAAAAlsLtGSkxZKxOXWvkltMVyUFfMW9SAK4gmv71KBH10CA==",
+      "name": "API 2"
+    },
+    {
+      "customerId": "2662367",
+      "accessLicense": "0100000000bc2a1753b841758614a694d64a38b31dbdafd285737b05a8a305a560e72eb401",
+      "secretKey": "AQAAAAC8KhdTuEF1hhSmlNZKOLMdFBuR/UJTKnmgAVkNkAGlEw==",
+      "name": "API 3"
+    },
+    {
+      "customerId": "2521363",
+      "accessLicense": "01000000000f6f6b9c7efb872210d906b908a116eb4d9c10366333d420db7ad2728add6612",
+      "secretKey": "AQAAAAAPb2ucfvuHIhDZBrkIoRbrRZ5myUwU4dD/OkGTwmfv/Q==",
+      "name": "API 4"
+    },
+    {
+      "customerId": "3151342",
+      "accessLicense": "01000000001935d2c69db6b9416b368c9d073e50d12a556770e52fbfd4cfc9296c2538559d",
+      "secretKey": "AQAAAAAZNdLGnba5QWs2jJ0HPlDRShJQUR6IsSX1Ape+WWs7BA==",
+      "name": "API 5"
+    },
+    {
+      "customerId": "3467871",
+      "accessLicense": "010000000093a99963f6b455731b39ab602942786a1d5eb3720bb8216eda413b2d9389c4e2",
+      "secretKey": "AQAAAACTqZlj9rRVcxs5q2ApQnhqM2o3V8VbnKICq91TZ0W59g==",
+      "name": "API 6"
+    },
+    {
+      "customerId": "4012848",
+      "accessLicense": "0100000000e9133ec51bce099ef7ee560b8a9a6894ac561c37f8880063320e2a34e219bea8",
+      "secretKey": "AQAAAADpEz7FG84JnvfuVguKmmiU9/KC0DxPywdEOCWqbv+sNA==",
+      "name": "API 7"
+    },
+    {
+      "customerId": "3203784",
+      "accessLicense": "0100000000aa7653e34218d6b2cda84dd9e601290a9bd008df67aa60cf79cb17b60d120cc1",
+      "secretKey": "AQAAAACqdlPjQhjWss2oTdnmASkKql8KoRapGVSy8nuZtKtuHA==",
+      "name": "API 8"
+    },
+    {
+      "customerId": "3763766",
+      "accessLicense": "010000000054ad068716dcdba1d1357a9c6ca9efe906d79afd3ad96a4b650f938d8b9952f9",
+      "secretKey": "AQAAAABUrQaHFtzbodE1epxsqe/p/R+sZzf3o60qvE7ZZmkhMw==",
+      "name": "API 9"
+    },
+    {
+      "customerId": "4022930",
+      "accessLicense": "0100000000067388524dc7a6e862abd2777e70e7846e846a44e46b34afc30e9b39f06a22ca",
+      "secretKey": "AQAAAAAGc4hSTcem6GKr0nd+cOeEIYe44yANUWer/ugeThqafg==",
+      "name": "API 10"
+    },
+    {
+      "customerId": "2402964",
+      "accessLicense": "010000000006fb6fac0c43c95ccbb99d5d3448dab8d4a97658921d3eb8900eef71edb94a72",
+      "secretKey": "AQAAAAAG+2+sDEPJXMu5nV00SNq4kKWn+Sjgmc7E4NgMP7sOPQ==",
+      "name": "API 11"
+    },
+    {
+      "customerId": "4135716",
+      "accessLicense": "0100000000f2af61b62c1cced4936b30c6904dd693ed5908ac8f3e808dda5711a9e8989f1c",
+      "secretKey": "AQAAAADyr2G2LBzO1JNrMMaQTdaT3FrwKsq78h+U6LaP1GQ71w==",
+      "name": "API 12"
+    },
+    {
+      "customerId": "2960305",
+      "accessLicense": "0100000000d4478ecfc2b51fa17ab1f71958a0e2015f6df68d59bcae61af01ee15f894f9b6",
+      "secretKey": "AQAAAADUR47PwrUfoXqx9xlYoOIBJRQM9K75+sgZA6tQivWjBQ==",
+      "name": "API 13"
+    },
+    {
+      "customerId": "4140001",
+      "accessLicense": "0100000000ed5dde22089ade404123467eafe5e1258e5ea0911c7407baddf42ee90823ef44",
+      "secretKey": "AQAAAADtXd4iCJreQEEjRn6v5eElTPlnOPZExTHZphGuF7F4Jg==",
+      "name": "API 14"
+    },
+    {
+      "customerId": "1502093",
+      "accessLicense": "0100000000e2de2afc13e5c0bd2b7b92677c6d84002e031dd41afbbe29cb24362c9548a346",
+      "secretKey": "AQAAAADi3ir8E+XAvSt7kmd8bYQA15MfAu0rgq0iBgQnB758sA==",
+      "name": "API 15"
+    }
+  ]
+}

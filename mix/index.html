@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>키워드 조합기</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main>
+        <div class="main-container">
+            <div class="header-section">
+                <h1>🔀 키워드 조합기</h1>
+                <p class="subtitle">키워드를 입력하고 원하는 조합을 선택하여 다양한 키워드 조합을 생성하세요</p>
+            </div>
+            
+            <div class="content-wrapper">
+                <div class="left-section">
+                    <div class="keyword-section">
+                        <h2>📝 키워드 입력</h2>
+                        <div class="keyword-inputs">
+                            <div class="input-wrapper">
+                                <label>키워드1</label>
+                                <textarea id="keyword1" placeholder="한 줄에 하나씩 입력"></textarea>
+                            </div>
+                            <div class="input-wrapper">
+                                <label>키워드2</label>
+                                <textarea id="keyword2" placeholder="한 줄에 하나씩 입력"></textarea>
+                            </div>
+                            <div class="input-wrapper">
+                                <label>키워드3</label>
+                                <textarea id="keyword3" placeholder="한 줄에 하나씩 입력"></textarea>
+                            </div>
+                            <div class="input-wrapper">
+                                <label>키워드4</label>
+                                <textarea id="keyword4" placeholder="한 줄에 하나씩 입력"></textarea>
+                            </div>
+                            <div class="input-wrapper">
+                                <label>키워드5</label>
+                                <textarea id="keyword5" placeholder="한 줄에 하나씩 입력"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <button id="selectAll" class="btn-control">✅ 전체선택</button>
+                        <button id="deselectAll" class="btn-control">❌ 전체해제</button>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="saikanchk">
+                            <span>키워드 사이 공백추가</span>
+                        </label>
+                    </div>
+
+                    <div class="combination-section">
+                        <h2>🔄 조합 순서 선택</h2>
+                        <div class="combo-container">
+                            <div class="combo-group">
+                                <h3>2개 조합</h3>
+                                <div class="checkbox-grid" id="combo2"></div>
+                            </div>
+                            
+                            <div class="combo-group">
+                                <h3>3개 조합</h3>
+                                <div class="checkbox-grid" id="combo3"></div>
+                            </div>
+                            
+                            <div class="combo-group">
+                                <h3>4개 조합</h3>
+                                <div class="checkbox-grid" id="combo4"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="right-section">
+                    <div class="result-header">
+                        <h2>📋 생성된 조합</h2>
+                        <span id="resultCount" class="result-count"></span>
+                    </div>
+                    <div class="result-buttons">
+                        <button id="generateSelected" class="btn-primary">🚀 조합하기</button>
+                        <button id="copyResults" class="btn-secondary">📋 복사하기</button>
+                        <button id="downloadResults" class="btn-secondary">💾 다운로드</button>
+                        <button id="clearResults" class="btn-danger">🗑️ 초기화</button>
+                    </div>
+                    <textarea id="results" class="result-area" readonly placeholder="조합된 결과가 여기에 표시됩니다"></textarea>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

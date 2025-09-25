@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>사진 분류 및 원고 작성기 (iframe)</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css?v=2.1">
+  <style>
+    /* 시간대별 메시지 스타일 */
+    .time-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.98);
+        padding: 30px 35px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        display: none;
+        max-width: 350px;
+        animation: slideIn 0.5s ease;
+    }
+    
+    .time-message.active {
+        display: block;
+    }
+    
+    .time-message .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+        background: none;
+        border: none;
+        padding: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .time-message .close-btn:hover {
+        color: #333;
+        transform: scale(1.1);
+    }
+    
+    .time-message h3 {
+        margin: 0 0 15px 0;
+        font-size: 21px;
+        line-height: 1.4;
+        text-align: center;
+    }
+    
+    .time-message p {
+        font-size: 17px;
+        line-height: 1.8;
+        margin: 0;
+        color: #555;
+        text-align: center;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    /* 원고 작성용 총합본 토글 스위치 스타일 */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 24px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #4CAF50;
+    }
+
+    .toggle-switch input:focus + .toggle-slider {
+      box-shadow: 0 0 1px #4CAF50;
+    }
+
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
+
+    /* 다크 모드 토글 스타일 */
+    [data-theme="dark"] .toggle-slider {
+      background-color: #555;
+    }
+
+    [data-theme="dark"] .toggle-switch input:checked + .toggle-slider {
+      background-color: #66bb6a;
+    }
+
+    .manuscript-toggle-container {
+      padding: 8px 12px;
+      background: var(--bg-color, #ffffff);
+      border: 1px solid var(--border-color, #ddd);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 4px 0;
+    }
+
+    .manuscript-toggle-container label[for="manuscriptToggle"],
+    .manuscript-toggle-container label[for="videoToggle"] {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-color, #333);
+      margin: 0;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-controls">
+    <button class="theme-toggle" id="themeToggle">🌙</button>
+    <button class="zoom-toggle" id="zoomToggle">🔍 사진 확대</button>
+    <button class="preview-count-toggle" id="previewCountToggle">📊 미리보기 현황</button>
+    <div style="position: relative;">
+      <button class="menu-tab" id="menuTab">☰ 메뉴</button>
+      <div class="menu-dropdown" id="menuDropdown">
+        <div class="menu-item" onclick="app.resetEntirePage()">🗑️ 전체 초기화</div>
+        <div class="menu-divider"></div>
+        <div class="menu-section-title">SQL 데이터만</div>
+        <div class="menu-item" onclick="app.exportSQLData()">📤 SQL 데이터 내보내기</div>
+        <div class="menu-item" onclick="app.importSQLData()">📥 SQL 데이터 가져오기</div>
+        <div class="menu-divider"></div>
+        <div class="menu-section-title">전체 백업 (SQL + 이미지)</div>
+        <div class="menu-item" onclick="app.exportFullBackup()">💾 전체 백업 내보내기</div>
+        <div class="menu-item" onclick="app.importFullBackup()">📦 전체 백업 가져오기</div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" onclick="app.resetSQLData()">🔄 SQL 데이터 초기화</div>
+      </div>
+    </div>
+  </div>
+  
+  <h1>🖼️ 사진 분류 + ✍️원고 작성기 (iframe)</h1>
+  
+  <div id="categories"></div>
+  
+  <button id="finalizeBtn">✅ 확정하기</button>
+  
+  <div id="finalPreviewContainer" style="display:none;">
+    <h2>🎯 최종 정렬</h2>
+    <div id="finalPreview" class="sortable"></div>
+    <div class="export-settings">
+      <h4>📦 Export 설정</h4>
+      
+      <!-- 사진 값 변경 설정 -->
+      <div class="modification-settings">
+        <h4>🖼️ 사진 값 변경 (네이버 중복방지)</h4>
+        <div class="modification-options">
+          <div class="modification-option" data-option="none">
+            <div class="option-header">
+              <span class="option-icon">🚫</span>
+              <span class="option-title">변경 안함</span>
+            </div>
+            <div class="option-description">원본 그대로 유지</div>
+          </div>
+          
+          <div class="modification-option" data-option="border">
+            <div class="option-header">
+              <span class="option-icon">🖼️</span>
+              <span class="option-title">테두리 추가</span>
+            </div>
+            <div class="option-description">랜덤 색상 테두리 추가</div>
+            <div class="option-input">
+              <label>두께: 
+                <select id="borderWidth">
+                  <option value="1" selected>1px</option>
+                  <option value="2">2px</option>
+                  <option value="3">3px</option>
+                  <option value="4">4px</option>
+                </select>
+              </label>
+              <label>색상: 
+                <select id="borderColor">
+                  <option value="white" selected>화이트</option>
+                  <option value="gray">그레이</option>
+                  <option value="black">블랙</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          
+          <div class="modification-option active" data-option="noise">
+            <div class="option-header">
+              <span class="option-icon">⚡</span>
+              <span class="option-title">노이즈 추가</span>
+            </div>
+            <div class="option-description">가장자리 50px 영역에 미세 노이즈 추가</div>
+            <div class="option-input">
+              <label>개수: 
+                <select id="noiseCount">
+                  <option value="10">10개</option>
+                  <option value="20">20개</option>
+                  <option value="30">30개</option>
+                  <option value="40">40개</option>
+                  <option value="50" selected>50개</option>
+                  <option value="60">60개</option>
+                  <option value="70">70개</option>
+                  <option value="80">80개</option>
+                  <option value="90">90개</option>
+                  <option value="100">100개</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          
+          <div class="modification-option active" data-option="exif">
+            <div class="option-header">
+              <span class="option-icon">📷</span>
+              <span class="option-title">EXIF정보 제거</span>
+            </div>
+            <div class="option-description">카메라 정보 등 메타데이터 제거</div>
+          </div>
+          
+          <div class="modification-option active" data-option="adjust">
+            <div class="option-header">
+              <span class="option-icon">🎨</span>
+              <span class="option-title">밝기/대비 조절</span>
+            </div>
+            <div class="option-description">밝기/대비 1~3% 랜덤 조정</div>
+          </div>
+        </div>
+        
+        <!-- 원고 만들기 설정 추가 -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+          <h4>📝 AI 원고 생성</h4>
+          <div class="manuscript-toggle-container" style="margin-top: 10px;">
+            <label for="aiManuscriptToggle">AI 블로그 원고 생성</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="aiManuscriptToggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <p style="font-size: 12px; color: #666; margin-top: 8px;">
+            ✨ Gemini AI가 이미지를 분석하여 네이버 블로그용 원고를 자동 생성합니다 (1700-1800자)
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- AI 원고 생성 iframe (토글 ON시 표시) -->
+    <div id="ai-manuscript-container" style="display: none; margin-bottom: 20px;">
+      <iframe 
+        id="ai-manuscript-iframe" 
+        src="post/index.html" 
+        style="width: 100%; height: 800px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; background: white;"
+        frameborder="0">
+      </iframe>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 15px; margin-top: 10px; flex-wrap: wrap;">
+      <button id="exportBtn">📦 Export</button>
+      <div class="manuscript-toggle-container">
+        <label for="manuscriptToggle">원고 작성용 총합본과 파일리스트</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="manuscriptToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="manuscript-toggle-container">
+        <label for="videoToggle">최적화 블로그용 동영상</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="videoToggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div id="zoom-preview">
+    <img src="" />
+    <div id="zoom-category"></div>
+  </div>
+
+  <div id="preview-count-popup">
+    <h4 style="margin: 0 0 10px 0; color: var(--button-bg);">📊 미리보기 현황</h4>
+    <div id="preview-count-list"></div>
+  </div>
+
+
+
+
+
+  <div id="export-status">처리 중...</div>
+  <div class="processing-message" id="processingMessage">처리 중입니다...</div>
+  <div class="progress-bar" id="progressBar">
+    <div class="progress-fill" id="progressFill">0%</div>
+  </div>
+
+  <!-- 스크롤 버튼 추가 -->
+  <div class="scroll-buttons">
+    <button class="scroll-btn scroll-to-top" id="scrollToTop" title="맨 위로"></button>
+    <button class="scroll-btn scroll-to-bottom" id="scrollToBottom" title="맨 아래로"></button>
+  </div>
+
+  <div class="info-banner" style="background: #e3f2fd; border: 1px solid #1976d2; border-radius: 8px; padding: 15px; margin: 20px 0; color: #1565c0;">
+    <h4 style="margin: 0 0 10px 0; color: #0d47a1;">💡 해당 버전에서 추가된 기능 : 단순화된 리사이징 시스템</h4>
+    <ul style="margin: 5px 0; padding-left: 20px; line-height: 1.6;">
+      <li><strong>업로드 리사이징:</strong> 모든 이미지를 설정한 크기로 자동 리사이징 (기본: 1200px)</li>
+      <li><strong>일관성 보장:</strong> 업로드부터 export까지 동일한 품질 유지</li>
+      <li><strong>자동저장 안정성:</strong> 용량 최적화로 자동저장 에러 완전 해결</li>
+      <li><strong>간단한 설정:</strong> 복잡한 크기 옵션 제거, 필수 리사이징만 적용</li>
+    </ul>
+  </div>
+
+  <!-- 시간대별 메시지 -->
+  <div class="time-message" id="timeMessage">
+    <button class="close-btn" onclick="document.getElementById('timeMessage').classList.remove('active')">×</button>
+    <h3 id="timeMessageTitle"></h3>
+    <p id="timeMessageText"></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <!-- FFmpeg.wasm 추가 (MP4 변환용) -->
+  <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+  <script src="videoGeneratorSimple.js"></script>
+  <script src="videoGeneratorMP4.js"></script>
+  <script src="utils.js"></script>
+  <script src="categoryManager.js"></script>
+  <script src="stateManager.js"></script>
+  <script src="stateManager_batch.js"></script>
+  <script src="stateManager_save_enhanced.js"></script>
+  <script src="manuscriptGenerator.js"></script>
+  <script src="script.js"></script>
+  
+  <script>
+    // 시간대별 특별 메시지
+    window.addEventListener('load', () => {
+        const now = new Date();
+        const hour = now.getHours();
+        const timeMessage = document.getElementById('timeMessage');
+        const timeMessageTitle = document.getElementById('timeMessageTitle');
+        const timeMessageText = document.getElementById('timeMessageText');
+        
+        if ((hour === 18 && now.getMinutes() >= 50) || hour >= 19 || hour < 4) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🌙</span>야근 알림';
+            timeMessageText.innerHTML = '야근하시나요?<br>건강 조심하세요!<br>스트레칭하고<br>눈도 쉬어주세요.';
+            timeMessage.classList.add('active');
+        } else if (hour === 12) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🍜</span>점심시간';
+            timeMessageText.innerHTML = '곧 점심시간이네요!<br>맛있는 거 드세요!<br>오후도 화이팅!';
+            timeMessage.classList.add('active');
+        }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 검색량 대량 조회기 (최적화 버전)</title>
+    <!-- XLSX 라이브러리 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* 시간대별 메시지 스타일 */
+        .time-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 10001;
+            display: none;
+            max-width: 350px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .time-message.active {
+            display: block;
+        }
+        
+        .time-message .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .time-message .close-btn:hover {
+            color: #333;
+            transform: scale(1.1);
+        }
+        
+        .time-message h3 {
+            margin: 0 0 15px 0;
+            font-size: 21px;
+            line-height: 1.4;
+            text-align: center;
+        }
+        
+        .time-message p {
+            font-size: 17px;
+            line-height: 1.8;
+            margin: 0;
+            color: #555;
+            text-align: center;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .version {
+            text-align: center;
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+        /* API 설정 모달 스타일 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        
+        .modal.active {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-title {
+            font-size: 1.5em;
+            color: #2c3e50;
+        }
+        
+        .close-btn {
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            border: none;
+            background: none;
+        }
+        
+        .api-config-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .api-config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .api-config-title {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .api-remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .api-config-grid {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group label {
+            margin-bottom: 5px;
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #5a6268);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(45deg, #ffc107, #ff9800);
+        }
+        
+        .btn-info {
+            background: linear-gradient(45deg, #17a2b8, #138496);
+        }
+        
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .settings-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #17a2b8, #138496);
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .file-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chips {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .chip {
+            padding: 6px 16px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 0.85em;
+            color: #555;
+        }
+        
+        .chip.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .api-status-panel {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .api-status-title {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .api-indicators {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            min-height: 40px; /* 최소 높이 고정 */
+        }
+        
+        .api-indicator {
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s ease; /* 부드러운 색상 전환 */
+        }
+        
+        .api-indicator.active {
+            background: rgba(76, 175, 80, 0.8);
+            font-weight: 600;
+        }
+        
+        .api-indicator.active span:first-child {
+            animation: blink 0.5s;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .api-indicator.inactive {
+            background: rgba(255, 255, 255, 0.1);
+            opacity: 0.6;
+        }
+        
+        .input-section {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .virtual-scroll-container {
+            height: 600px;
+            overflow-y: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+        
+        /* 개선된 테이블 헤더 스타일 - 여러 줄 지원 */
+        .table-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: #1a1a2e;
+            color: #fff;
+            display: grid;
+            grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.6fr 0.6fr 0.8fr 0.8fr 0.6fr 1fr;
+            padding: 10px;
+            font-weight: 600;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 3px solid #16213e;
+        }
+        
+        /* 헤더 셀 스타일 - 여러 줄 허용 및 중앙 정렬 */
+        .header-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 5px;
+            word-break: keep-all;
+            line-height: 1.2;
+            min-height: 40px;
+        }
+        
+        /* 테이블 행 스타일 - 모든 내용 중앙 정렬 */
+        .table-row {
+            display: grid;
+            grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 0.6fr 0.6fr 0.8fr 0.8fr 0.6fr 1fr;
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.9em;
+            color: #333;
+            background: white;
+            transition: background 0.2s;
+        }
+        
+        .table-row:hover {
+            background: #f8f9fc;
+        }
+        
+        .table-row.cached {
+            background: linear-gradient(90deg, #e8f5e9 0%, white 100%);
+        }
+        
+        /* 테이블 셀 - 모든 셀 중앙 정렬 */
+        .table-cell {
+            padding: 0 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        /* 키워드 셀만 좌측 정렬 */
+        .table-cell.keyword {
+            justify-content: flex-start;
+            text-align: left;
+        }
+        
+        .alert {
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .tip {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #6c757d;
+            background: #e7f3ff;
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #0066cc;
+        }
+        
+        progress {
+            width: 200px;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        progress::-webkit-progress-bar {
+            background: #f0f0f0;
+        }
+        
+        progress::-webkit-progress-value {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+        
+        .loading-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 배치 처리 상태 표시 */
+        .batch-status {
+            display: inline-block;
+            margin-left: 15px;
+            padding: 5px 12px;
+            background: #e3f2fd;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #1976d2;
+            font-weight: 600;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .table-row.cached {
+            background-color: rgba(40, 167, 69, 0.03);
+        }
+        
+        .table-row.error-row {
+            background-color: rgba(220, 53, 69, 0.05);
+        }
+        
+        .api-cell span {
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 설정 버튼 -->
+    <button class="settings-btn" onclick="openApiModal()">
+        ⚙️ API 설정
+    </button>
+
+    <div class="container">
+        <h1>🔍 네이버 검색량 대량 조회기</h1>
+        <p class="version">최적화 버전 v3.0 - 배치 처리 & 중앙 정렬</p>
+        
+        <div class="chips">
+            <span class="chip active">🔀 멀티 API</span>
+            <span class="chip active">💾 로컬 저장</span>
+            <span class="chip active">📂 파일 가져오기/내보내기</span>
+            <span class="chip active" id="cacheChip">🚀 IndexedDB 캐시</span>
+            <span class="chip active">📦 배치 처리</span>
+        </div>
+        
+        <!-- API 상태 패널 -->
+        <div class="api-status-panel">
+            <div class="api-status-title">📡 API 상태 모니터</div>
+            <div class="api-indicators" id="apiIndicators">
+                <div class="api-indicator inactive">
+                    <span>설정된 API가 없습니다. 우측 상단의 설정 버튼을 클릭하세요.</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 알림 영역 -->
+        <div id="alertArea"></div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label>🏷️ 키워드 (줄바꿈 또는 쉼표로 구분) <span style="color: #e74c3c; font-size: 0.9em;">※ 띄어쓰기는 자동 제거됩니다</span></label>
+                <textarea id="kw" placeholder="예시:&#10;게이밍 모니터 → 게이밍모니터&#10;서울 맛집 → 서울맛집&#10;운동화, 등산화, 주식 투자 → 운동화, 등산화, 주식투자"></textarea>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin: 20px 0;">
+                <div class="form-group">
+                    <label>⏱️ 요청 간격(ms) - 낮을수록 빠르지만 안정성 저하</label>
+                    <input id="interval" type="number" min="50" step="50" value="100">
+                    <small style="color: #666; margin-top: 5px;">권장: 100-200ms</small>
+                </div>
+                <div class="form-group">
+                    <label>📦 배치 크기 (동시 처리 키워드 수)</label>
+                    <input id="batchSize" type="number" min="1" max="30" value="3">
+                    <small style="color: #666; margin-top: 5px;">자동 권장값: API 개수의 70% (현재 API가 설정되면 자동 계산)</small>
+                </div>
+                <div class="form-group">
+                    <label>🔄 재시도 횟수 (에러 시 다른 API로 재시도)</label>
+                    <input id="retryCount" type="number" min="0" max="20" value="3">
+                    <small style="color: #666; margin-top: 5px;">권장: 3-5회 (각 API를 순환하며 재시도)</small>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning">
+                💡 <strong>배치 처리란?</strong> 여러 키워드를 동시에 처리하여 속도를 향상시킵니다.
+                예: 배치 크기 3 = 3개 키워드를 동시에 API 호출
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 20px; margin: 15px 0;">
+                <label>
+                    <input type="checkbox" id="useCache" checked>
+                    <span>캐시 사용 (IndexedDB)</span>
+                </label>
+                <button class="btn btn-danger" onclick="clearCache()">캐시 초기화</button>
+                <span id="cacheInfo" style="color: #666;">캐시: 계산 중...</span>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn" id="runBtn" onclick="runSearch()">🔍 조회하기</button>
+                <button class="btn btn-success" id="csvBtn" disabled onclick="downloadCSV()">📄 CSV 다운로드</button>
+                <button class="btn btn-success" id="xlsxBtn" disabled onclick="downloadExcel()">📊 Excel 다운로드</button>
+                <span id="status" style="margin-left: 15px; color: #666;"></span>
+                <span id="batchStatus" class="batch-status" style="display:none"></span>
+                <span id="loadingIndicator" class="loading-indicator" style="display:none"></span>
+                <progress id="prog" max="100" value="0" style="display:none"></progress>
+            </div>
+        </div>
+        
+        <!-- 가상 스크롤 컨테이너 - 개선된 헤더 -->
+        <div class="virtual-scroll-container" id="scrollContainer" style="display:none">
+            <div class="table-header">
+                <div class="header-cell">키워드</div>
+                <div class="header-cell">총<br>검색수</div>
+                <div class="header-cell">PC<br>검색수</div>
+                <div class="header-cell">모바일<br>검색수</div>
+                <div class="header-cell">PC<br>클릭수</div>
+                <div class="header-cell">모바일<br>클릭수</div>
+                <div class="header-cell">PC<br>CTR</div>
+                <div class="header-cell">모바일<br>CTR</div>
+                <div class="header-cell">평균노출<br>광고수</div>
+                <div class="header-cell">경쟁<br>정도</div>
+                <div class="header-cell">API</div>
+                <div class="header-cell">에러</div>
+            </div>
+            <div id="spacer" style="position: relative;">
+                <div id="content" style="position: absolute; top: 0; left: 0; right: 0;"></div>
+            </div>
+        </div>
+        
+        <p class="tip">
+            💡 API 키는 브라우저에 안전하게 저장되며, 파일로 내보내거나 가져올 수 있습니다.
+        </p>
+    </div>
+
+    <!-- API 설정 모달 -->
+    <div class="modal" id="apiModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">🔑 API 설정</h2>
+                <button class="close-btn" onclick="closeApiModal()">&times;</button>
+            </div>
+            
+            <div class="alert alert-info">
+                네이버 검색광고 API 키를 입력하세요. 최대 30개의 API를 등록할 수 있습니다.
+            </div>
+            
+            <div id="apiConfigList">
+                <!-- API 설정 폼이 동적으로 추가됩니다 -->
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-warning" onclick="addApiConfig()">+ API 추가</button>
+                <button class="btn btn-success" onclick="saveApiConfigs()">💾 저장</button>
+                <div class="file-input-wrapper">
+                    <input type="file" id="importFile" class="file-input" accept=".json" onchange="importApiKeys(event)">
+                    <label for="importFile" class="file-label">📂 가져오기</label>
+                </div>
+                <button class="btn btn-info" onclick="exportApiKeys()">💾 내보내기</button>
+                <button class="btn btn-info" onclick="loadDefaultAPIs()">📋 기본 API (15개)</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// 전역 변수
+let apiConfigs = [];
+let allRows = [];
+let virtualScroll = null;
+let cacheManager = null;
+let currentApiIndex = 0; // 현재 사용 중인 API 인덱스
+const ROW_HEIGHT = 49;
+
+// IndexedDB 캐시 매니저 클래스
+class CacheManager {
+    constructor() {
+        this.dbName = 'NaverSearchCache';
+        this.storeName = 'keywords';
+        this.db = null;
+        this.initPromise = this.initDB();
+    }
+
+    async initDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1);
+            
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.db = request.result;
+                resolve();
+            };
+            
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(this.storeName)) {
+                    const store = db.createObjectStore(this.storeName, { keyPath: 'keyword' });
+                    store.createIndex('timestamp', 'timestamp', { unique: false });
+                }
+            };
+        });
+    }
+
+    async get(keyword) {
+        await this.initPromise;
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction([this.storeName], 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.get(keyword);
+            
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(null);
+        });
+    }
+
+    async set(keyword, data) {
+        await this.initPromise;
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.put({
+                ...data,
+                keyword,
+                timestamp: Date.now()
+            });
+            
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => resolve(false);
+        });
+    }
+
+    async clear() {
+        await this.initPromise;
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction([this.storeName], 'readwrite');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.clear();
+            
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => resolve(false);
+        });
+    }
+
+    async getSize() {
+        await this.initPromise;
+        return new Promise((resolve) => {
+            const transaction = this.db.transaction([this.storeName], 'readonly');
+            const store = transaction.objectStore(this.storeName);
+            const request = store.count();
+            
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => resolve(0);
+        });
+    }
+}
+
+// 가상 스크롤 클래스
+class VirtualScroll {
+    constructor(container, contentEl, spacerEl) {
+        this.container = container;
+        this.contentEl = contentEl;
+        this.spacerEl = spacerEl;
+        this.items = [];
+        this.itemHeight = ROW_HEIGHT;
+        this.visible = 30;
+        this.scrollTop = 0;
+        this.start = 0;
+        
+        this.container.addEventListener('scroll', () => {
+            this.scrollTop = this.container.scrollTop;
+            this.render();
+        });
+    }
+
+    updateItems(items) {
+        this.items = items;
+        this.spacerEl.style.height = `${this.items.length * this.itemHeight}px`;
+        this.render();
+    }
+
+    render() {
+        this.start = Math.floor(this.scrollTop / this.itemHeight);
+        const end = Math.min(this.start + this.visible, this.items.length);
+        
+        const fragment = document.createDocumentFragment();
+        
+        for (let i = this.start; i < end; i++) {
+            const row = this.items[i];
+            const div = document.createElement('div');
+            div.className = row.fromCache ? 'table-row cached' : 'table-row';
+            
+            const pc = parseInt(row.monthlyPcQcCnt) || 0;
+            const mo = parseInt(row.monthlyMobileQcCnt) || 0;
+            const total = pc + mo;
+            
+            // 모든 셀 중앙 정렬 (키워드만 좌측)
+            div.innerHTML = `
+                <div class="table-cell keyword">${this.escapeHtml(row.keyword)}</div>
+                <div class="table-cell">${total.toLocaleString()}</div>
+                <div class="table-cell">${pc.toLocaleString()}</div>
+                <div class="table-cell">${mo.toLocaleString()}</div>
+                <div class="table-cell">${row.monthlyAvePcClkCnt || '-'}</div>
+                <div class="table-cell">${row.monthlyAveMobileClkCnt || '-'}</div>
+                <div class="table-cell">${row.monthlyAvePcCtr || '-'}</div>
+                <div class="table-cell">${row.monthlyAveMobileCtr || '-'}</div>
+                <div class="table-cell">${row.plAvgDepth || '-'}</div>
+                <div class="table-cell">${row.compIdx || '-'}</div>
+                <div class="table-cell api-cell">
+                    ${row.fromCache ? 
+                        '<span style="color: #28a745;">캐시</span>' : 
+                        (row.api_used ? `<span style="color: #007bff;">${row.api_used}</span>` : '-')}
+                </div>
+                <div class="table-cell">${row.error || ''}</div>
+            `;
+            
+            fragment.appendChild(div);
+        }
+        
+        this.contentEl.innerHTML = '';
+        this.contentEl.appendChild(fragment);
+        this.contentEl.style.transform = `translateY(${this.start * this.itemHeight}px)`;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
+// 초기화 함수
+async function init() {
+    // LocalStorage에서 API 설정 로드
+    const savedConfigs = localStorage.getItem('naverApiConfigs');
+    if (savedConfigs) {
+        try {
+            apiConfigs = JSON.parse(savedConfigs);
+            updateApiIndicators();
+        } catch (e) {
+            console.error('API 설정 로드 실패:', e);
+        }
+    }
+    
+    // 캐시 매니저 초기화
+    cacheManager = new CacheManager();
+    await updateCacheInfo();
+    
+    // 가상 스크롤 초기화
+    const scrollContainer = document.getElementById('scrollContainer');
+    const content = document.getElementById('content');
+    const spacer = document.getElementById('spacer');
+    if (scrollContainer && content && spacer) {
+        virtualScroll = new VirtualScroll(scrollContainer, content, spacer);
+    }
+    
+    // 키워드 입력 필드에 이벤트 리스너 추가 (띄어쓰기 자동 제거)
+    const keywordInput = document.getElementById('kw');
+    if (keywordInput) {
+        // 붙여넣기 이벤트 처리
+        keywordInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            let pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            
+            // 각 줄에서 띄어쓰기 제거
+            const lines = pastedText.split(/[\n,]+/);
+            const processedLines = lines.map(line => line.trim().replace(/\s+/g, ''));
+            const processedText = processedLines.join('\n');
+            
+            // 현재 커서 위치에 삽입
+            const start = this.selectionStart;
+            const end = this.selectionEnd;
+            const currentValue = this.value;
+            
+            this.value = currentValue.substring(0, start) + processedText + currentValue.substring(end);
+            
+            // 커서 위치 조정
+            const newPos = start + processedText.length;
+            this.setSelectionRange(newPos, newPos);
+        });
+        
+        // 사용자가 입력할 때 안내 메시지 표시 (선택사항)
+        keywordInput.setAttribute('placeholder', '키워드 입력 (띄어쓰기는 자동 제거됩니다)\n예: 서울 맛집 → 서울맛집');
+    }
+}
+
+// API 설정 모달 열기
+function openApiModal() {
+    document.getElementById('apiModal').classList.add('active');
+    renderApiConfigs();
+}
+
+// API 설정 모달 닫기
+function closeApiModal() {
+    document.getElementById('apiModal').classList.remove('active');
+}
+
+// API 설정 폼 렌더링
+function renderApiConfigs() {
+    const container = document.getElementById('apiConfigList');
+    container.innerHTML = '';
+    
+    // 최소 1개는 표시
+    const configs = apiConfigs.length > 0 ? apiConfigs : [{}];
+    
+    configs.forEach((config, index) => {
+        const section = document.createElement('div');
+        section.className = 'api-config-section';
+        section.innerHTML = `
+            <div class="api-config-header">
+                <h3 class="api-config-title">API ${index + 1}</h3>
+                ${configs.length > 1 ? `<button class="api-remove-btn" onclick="removeApiConfig(${index})">삭제</button>` : ''}
+            </div>
+            <div class="api-config-grid">
+                <div class="form-group">
+                    <label>Customer ID</label>
+                    <input type="text" id="customerId_${index}" value="${config.customerId || ''}" placeholder="예: 2521363">
+                </div>
+                <div class="form-group">
+                    <label>Access License</label>
+                    <input type="text" id="accessLicense_${index}" value="${config.accessLicense || ''}" placeholder="01000000...">
+                </div>
+                <div class="form-group">
+                    <label>Secret Key</label>
+                    <input type="text" id="secretKey_${index}" value="${config.secretKey || ''}" placeholder="AQA...">
+                </div>
+                <div class="form-group">
+                    <label>API 이름 (선택사항)</label>
+                    <input type="text" id="apiName_${index}" value="${config.name || `API ${index + 1}`}" placeholder="예: 메인 API">
+                </div>
+            </div>
+        `;
+        container.appendChild(section);
+    });
+}
+
+// API 설정 추가
+function addApiConfig() {
+    if (apiConfigs.length >= 30) {
+        showAlert('최대 30개의 API만 등록할 수 있습니다.', 'danger');
+        return;
+    }
+    apiConfigs.push({});
+    renderApiConfigs();
+}
+
+// API 설정 삭제
+function removeApiConfig(index) {
+    apiConfigs.splice(index, 1);
+    renderApiConfigs();
+}
+
+// API 설정 저장
+function saveApiConfigs() {
+    const configs = [];
+    const maxIndex = apiConfigs.length || 1;
+    
+    for (let i = 0; i < maxIndex; i++) {
+        const customerId = document.getElementById(`customerId_${i}`)?.value.trim();
+        const accessLicense = document.getElementById(`accessLicense_${i}`)?.value.trim();
+        const secretKey = document.getElementById(`secretKey_${i}`)?.value.trim();
+        const apiName = document.getElementById(`apiName_${i}`)?.value.trim() || `API ${i + 1}`;
+        
+        if (customerId && accessLicense && secretKey) {
+            configs.push({
+                customerId,
+                accessLicense,
+                secretKey,
+                name: apiName
+            });
+        }
+    }
+    
+    if (configs.length === 0) {
+        showAlert('최소 1개의 API 설정을 입력해주세요.', 'danger');
+        return;
+    }
+    
+    apiConfigs = configs;
+    localStorage.setItem('naverApiConfigs', JSON.stringify(apiConfigs));
+    updateApiIndicators();
+    closeApiModal();
+    showAlert(`${configs.length}개의 API 설정이 저장되었습니다.`, 'success');
+}
+
+// API 키 내보내기
+function exportApiKeys() {
+    if (apiConfigs.length === 0) {
+        showAlert('저장된 API 설정이 없습니다.', 'danger');
+        return;
+    }
+    
+    const data = {
+        version: '3.0',
+        timestamp: new Date().toISOString(),
+        configs: apiConfigs
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `naver_api_keys_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    showAlert('API 키가 파일로 내보내기 되었습니다.', 'success');
+}
+
+// 기본 API (15개) 불러오기
+async function loadDefaultAPIs() {
+    try {
+        const response = await fetch('15ea_naver_api_keys.json');
+        if (!response.ok) {
+            throw new Error('파일을 찾을 수 없습니다.');
+        }
+        
+        const data = await response.json();
+        if (data.configs && Array.isArray(data.configs)) {
+            // 기존 API와 병합할지 물어보기
+            if (apiConfigs.length > 0) {
+                if (!confirm('기존 API 설정을 덮어씌우시겠습니까?\n\n"취소"를 누르면 기존 설정에 추가됩니다.')) {
+                    // 기존 설정에 추가
+                    apiConfigs = [...apiConfigs, ...data.configs];
+                    if (apiConfigs.length > 30) {
+                        apiConfigs = apiConfigs.slice(0, 30);
+                        showAlert(`최대 30개까지만 등록 가능합니다. ${data.configs.length}개 중 일부만 추가되었습니다.`, 'warning');
+                    } else {
+                        showAlert(`${data.configs.length}개의 기본 API가 추가되었습니다.`, 'success');
+                    }
+                } else {
+                    // 기존 설정 덮어쓰기
+                    apiConfigs = data.configs;
+                    showAlert(`${apiConfigs.length}개의 기본 API를 불러왔습니다.`, 'success');
+                }
+            } else {
+                // 빈 상태에서 불러오기
+                apiConfigs = data.configs;
+                showAlert(`${apiConfigs.length}개의 기본 API를 불러왔습니다.`, 'success');
+            }
+            
+            localStorage.setItem('naverApiConfigs', JSON.stringify(apiConfigs));
+            renderApiConfigs();
+            updateApiIndicators();
+        } else {
+            showAlert('올바른 API 설정 파일이 아닙니다.', 'danger');
+        }
+    } catch (err) {
+        showAlert('기본 API 파일 로드 실패: ' + err.message, 'danger');
+        console.error('Error loading default APIs:', err);
+    }
+}
+
+// API 키 가져오기
+function importApiKeys(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (data.configs && Array.isArray(data.configs)) {
+                apiConfigs = data.configs;
+                localStorage.setItem('naverApiConfigs', JSON.stringify(apiConfigs));
+                renderApiConfigs();
+                updateApiIndicators();
+                showAlert(`${apiConfigs.length}개의 API 설정을 가져왔습니다.`, 'success');
+            } else {
+                showAlert('올바른 API 설정 파일이 아닙니다.', 'danger');
+            }
+        } catch (err) {
+            showAlert('파일 읽기 실패: ' + err.message, 'danger');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// API 상태 인디케이터 업데이트
+function updateApiIndicators() {
+    const container = document.getElementById('apiIndicators');
+    
+    if (apiConfigs.length === 0) {
+        container.innerHTML = `
+            <div class="api-indicator inactive">
+                <span>설정된 API가 없습니다. 우측 상단의 설정 버튼을 클릭하세요.</span>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    apiConfigs.forEach((config, index) => {
+        const indicator = document.createElement('div');
+        indicator.className = 'api-indicator inactive';
+        indicator.id = `api-${index}`;
+        indicator.innerHTML = `
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: currentColor;"></span>
+            <span>${config.name || `API ${index + 1}`}</span>
+        `;
+        container.appendChild(indicator);
+    });
+    
+    // batchSize 기본값을 API 개수의 70%로 자동 업데이트
+    const batchSizeInput = document.getElementById('batchSize');
+    if (batchSizeInput) {
+        const suggestedBatchSize = Math.max(1, Math.floor(apiConfigs.length * 0.7));
+        // 현재 값이 기본값(3)이거나 사용자가 수정하지 않았으면 자동 업데이트
+        if (batchSizeInput.value === '3' || batchSizeInput.value === '' || parseInt(batchSizeInput.value) > apiConfigs.length) {
+            batchSizeInput.value = suggestedBatchSize;
+            // placeholder에 권장값 표시
+            batchSizeInput.setAttribute('placeholder', `권장: ${suggestedBatchSize}`);
+        }
+        // max 속성도 API 개수로 업데이트
+        batchSizeInput.setAttribute('max', apiConfigs.length);
+    }
+}
+
+// 알림 표시
+function showAlert(message, type) {
+    const alertArea = document.getElementById('alertArea');
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type}`;
+    alert.textContent = message;
+    
+    alertArea.innerHTML = '';
+    alertArea.appendChild(alert);
+    
+    // 20초 후에 사라지도록 변경
+    setTimeout(() => {
+        alert.remove();
+    }, 20000);
+}
+
+// 캐시 정보 업데이트
+async function updateCacheInfo() {
+    if (!cacheManager) return;
+    const size = await cacheManager.getSize();
+    const cacheInfo = document.getElementById('cacheInfo');
+    if (cacheInfo) {
+        cacheInfo.textContent = `캐시: ${size.toLocaleString()}개 저장됨`;
+    }
+}
+
+// 캐시 초기화
+async function clearCache() {
+    if (confirm('정말 캐시를 초기화하시겠습니까?')) {
+        await cacheManager.clear();
+        await updateCacheInfo();
+        showAlert('캐시가 초기화되었습니다.', 'success');
+    }
+}
+
+// API 호출 함수 - 라운드 로빈 방식으로 개선 (재시도 시 다른 API 사용)
+async function callNaverAPI(keyword, apiIndex = null, retryCount = 1, requestInterval = 100) {
+    if (apiConfigs.length === 0) {
+        throw new Error('API 설정이 없습니다.');
+    }
+    
+    let lastError = null;
+    let attempts = 0;
+    const maxAttempts = Math.min(retryCount + 1, apiConfigs.length * 2); // 최대 시도 횟수 제한
+    
+    // 사용한 API 인덱스 추적 (중복 방지)
+    const usedIndices = new Set();
+    
+    while (attempts < maxAttempts) {
+        // 매 시도마다 다른 API 사용
+        let useIndex;
+        
+        if (attempts === 0 && apiIndex !== null) {
+            // 첫 시도에서 지정된 API가 있으면 사용
+            useIndex = apiIndex;
+        } else {
+            // 재시도 시 다음 API 선택
+            // 모든 API를 순환하면서 시도
+            for (let i = 0; i < apiConfigs.length; i++) {
+                const nextIndex = (currentApiIndex + i) % apiConfigs.length;
+                if (!usedIndices.has(nextIndex) || usedIndices.size >= apiConfigs.length) {
+                    useIndex = nextIndex;
+                    currentApiIndex = (nextIndex + 1) % apiConfigs.length;
+                    break;
+                }
+            }
+        }
+        
+        usedIndices.add(useIndex);
+        const apiConfig = apiConfigs[useIndex];
+        const apiName = apiConfig.name || `API ${useIndex + 1}`;
+        
+        try {
+            if (attempts > 0) {
+                console.log(`🔄 재시도 ${attempts}/${retryCount}: ${apiName} 사용 (키워드: ${keyword})`);
+                // 재시도 시에도 API 인디케이터 업데이트
+                updateActiveApiIndicator(useIndex);
+            }
+            
+            const response = await fetch('api_batch.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    keyword: keyword,
+                    apiConfig: apiConfig,
+                    apiName: apiName
+                })
+            });
+            
+            // 응답 텍스트를 먼저 가져옴
+            const responseText = await response.text();
+            
+            // 성공한 경우
+            if (response.ok) {
+                try {
+                    const result = JSON.parse(responseText);
+                    result.api_used = apiName;
+                    if (attempts > 0) {
+                        console.log(`✅ 재시도 성공: ${apiName} (키워드: ${keyword}, ${attempts}회 재시도 후)`);
+                    }
+                    return result;
+                } catch (parseError) {
+                    throw new Error(`JSON 파싱 실패 (${apiName}): ${responseText}`);
+                }
+            }
+            
+            // 에러 처리
+            let errorMsg = `API Error ${response.status} (${apiName})`;
+            
+            // 에러 응답 파싱 시도
+            try {
+                const errorData = JSON.parse(responseText);
+                if (errorData.error) {
+                    errorMsg = `${apiName}: ${errorData.error}`;
+                }
+            } catch (e) {
+                errorMsg += `: ${responseText}`;
+            }
+            
+            lastError = new Error(errorMsg);
+            
+            // Rate Limit 에러 특별 처리
+            if (response.status === 429) {
+                console.warn(`⚠️ Rate Limit 초과 (${apiName}): 일일 한도를 초과했습니다.`);
+            } else {
+                console.warn(`❌ ${errorMsg}`);
+            }
+            
+            attempts++;
+            
+            if (attempts < maxAttempts && attempts <= apiConfigs.length) {
+                // 재시도 전 대기 - 요청 간격과 동일하게 설정
+                console.log(`⏳ ${requestInterval}ms 후 다른 API로 재시도... (시도 ${attempts + 1}/${maxAttempts}, 다음 API로 전환)`);
+                await new Promise(resolve => setTimeout(resolve, requestInterval));
+                continue;
+            }
+            
+        } catch (error) {
+            // 네트워크 에러 또는 기타 에러
+            lastError = error;
+            console.error(`❌ 에러 발생 (${apiName}): ${error.message}`);
+            attempts++;
+            
+            if (attempts < maxAttempts) {
+                console.log(`⏳ ${requestInterval}ms 후 다른 API로 재시도... (시도 ${attempts + 1}/${maxAttempts})`);
+                await new Promise(resolve => setTimeout(resolve, requestInterval));
+            }
+        }
+    }
+    
+    // 모든 재시도 실패
+    console.error(`💀 최종 실패 (${attempts}회 시도, 키워드: ${keyword}): ${lastError?.message}`);
+    throw lastError || new Error('API 호출 실패');
+}
+
+// 배치 처리 함수 - 실시간 업데이트 지원
+async function processBatch(keywords, batchSize, requestInterval, useCache, retryCount = 1) {
+    const batchStatus = document.getElementById('batchStatus');
+    const results = [];
+    let totalProcessed = 0;
+    
+    // 배치 상태 표시
+    batchStatus.style.display = 'inline-block';
+    
+    for (let i = 0; i < keywords.length; i += batchSize) {
+        const batch = keywords.slice(i, Math.min(i + batchSize, keywords.length));
+        const batchPromises = [];
+        
+        // 배치 상태 업데이트 - 숫자로 표기
+        const batchStart = i + 1;
+        const batchEnd = Math.min(i + batchSize, keywords.length);
+        batchStatus.textContent = `배치 처리중: ${batchStart}-${batchEnd} / ${keywords.length}`;
+        
+        for (const keyword of batch) {
+            // 캐시 확인
+            if (useCache && cacheManager) {
+                const cached = await cacheManager.get(keyword);
+                if (cached) {
+                    const result = {
+                        ...cached,
+                        fromCache: true,
+                        api_used: '캐시'
+                    };
+                    results.push(result);
+                    
+                    // 실시간으로 테이블에 추가
+                    allRows.push(result);
+                    virtualScroll.updateItems(allRows);
+                    
+                    totalProcessed++;
+                    document.getElementById('prog').value = totalProcessed;
+                    document.getElementById('status').textContent = `${totalProcessed}/${keywords.length} 처리 완료`;
+                    continue;
+                }
+            }
+            
+            // API 호출 (Promise 배열에 추가)
+            const apiPromise = (async () => {
+                try {
+                    // 현재 사용할 API 결정 (각 키워드마다 다른 API 사용 가능)
+                    const apiIndex = currentApiIndex;
+                    currentApiIndex = (currentApiIndex + 1) % apiConfigs.length;
+                    
+                    // API 인디케이터 활성화
+                    updateActiveApiIndicator(apiIndex);
+                    
+                    const result = await callNaverAPI(keyword, apiIndex, retryCount, requestInterval);
+                    
+                    // 캐시 저장
+                    if (useCache && cacheManager && !result.error) {
+                        await cacheManager.set(keyword, result);
+                    }
+                    
+                    // api_used가 이미 설정되어 있음 (callNaverAPI에서 설정)
+                    
+                    // 실시간으로 테이블에 추가
+                    allRows.push(result);
+                    virtualScroll.updateItems(allRows);
+                    
+                    totalProcessed++;
+                    document.getElementById('prog').value = totalProcessed;
+                    document.getElementById('status').textContent = `${totalProcessed}/${keywords.length} 처리 완료`;
+                    
+                    return result;
+                } catch (error) {
+                    const errorResult = {
+                        keyword: keyword,
+                        error: error.message,
+                        api_used: '에러 (재시도 완료)'
+                    };
+                    
+                    // 에러도 실시간으로 테이블에 추가
+                    allRows.push(errorResult);
+                    virtualScroll.updateItems(allRows);
+                    
+                    totalProcessed++;
+                    document.getElementById('prog').value = totalProcessed;
+                    document.getElementById('status').textContent = `${totalProcessed}/${keywords.length} 처리 완료`;
+                    
+                    return errorResult;
+                }
+            })();
+            
+            batchPromises.push(apiPromise);
+        }
+        
+        // 배치 완료 대기
+        const batchResults = await Promise.all(batchPromises);
+        results.push(...batchResults);
+        
+        // 다음 배치 전 대기
+        if (i + batchSize < keywords.length) {
+            await new Promise(resolve => setTimeout(resolve, requestInterval));
+        }
+    }
+    
+    return results;
+}
+
+// API 인디케이터 활성화 함수
+function updateActiveApiIndicator(apiIndex) {
+    // 모든 인디케이터 비활성화
+    document.querySelectorAll('.api-indicator').forEach(ind => {
+        ind.classList.remove('active');
+        ind.classList.add('inactive');
+    });
+    
+    // 현재 API 인디케이터 활성화
+    const indicator = document.getElementById(`api-${apiIndex}`);
+    if (indicator) {
+        indicator.classList.remove('inactive');
+        indicator.classList.add('active');
+        
+        // 500ms 후 원래 상태로 복귀
+        setTimeout(() => {
+            indicator.classList.remove('active');
+            indicator.classList.add('inactive');
+        }, 500);
+    }
+}
+
+// 검색 실행 - 배치 처리 방식으로 개선
+async function runSearch() {
+    const keywordInput = document.getElementById('kw').value.trim();
+    if (!keywordInput) {
+        showAlert('키워드를 입력하세요.', 'danger');
+        return;
+    }
+    
+    if (apiConfigs.length === 0) {
+        showAlert('API 설정이 필요합니다. 우측 상단의 설정 버튼을 클릭하세요.', 'danger');
+        return;
+    }
+    
+    // UI 초기화
+    const runBtn = document.getElementById('runBtn');
+    const csvBtn = document.getElementById('csvBtn');
+    const xlsxBtn = document.getElementById('xlsxBtn');
+    const status = document.getElementById('status');
+    const prog = document.getElementById('prog');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const scrollContainer = document.getElementById('scrollContainer');
+    const batchStatus = document.getElementById('batchStatus');
+    
+    runBtn.disabled = true;
+    csvBtn.disabled = true;
+    xlsxBtn.disabled = true;
+    prog.style.display = 'inline';
+    prog.value = 0;
+    status.textContent = '처리 중...';
+    scrollContainer.style.display = 'block';
+    loadingIndicator.style.display = 'inline-block';
+    
+    // 파라미터
+    const requestInterval = parseInt(document.getElementById('interval').value) || 100;
+    
+    // batchSize를 등록된 API 개수의 70%로 자동 설정 (최소 1, 최대 등록된 API 수)
+    const suggestedBatchSize = Math.max(1, Math.floor(apiConfigs.length * 0.7));
+    const batchSizeInput = document.getElementById('batchSize');
+    let batchSize = parseInt(batchSizeInput.value) || suggestedBatchSize;
+    
+    // 만약 현재 값이 기본값(3)이거나 API 개수가 변경되었다면 자동 조정
+    if (batchSizeInput.value === '3' || batchSize > apiConfigs.length) {
+        batchSize = suggestedBatchSize;
+        batchSizeInput.value = batchSize;
+    }
+    
+    const useCache = document.getElementById('useCache').checked;
+    const retryCount = parseInt(document.getElementById('retryCount').value) || 3;
+    
+    // 키워드 파싱 - 띄어쓰기 제거 추가
+    const keywords = keywordInput.split(/[\n,]+/)
+        .map(k => k.trim().replace(/\s+/g, ''))  // 모든 띄어쓰기 제거
+        .filter(k => k);
+    
+    prog.max = keywords.length;
+    allRows = [];
+    currentApiIndex = 0; // API 인덱스 초기화
+    
+    try {
+        const startTime = Date.now();
+        
+        // 배치 처리 실행 (실시간 업데이트는 processBatch 내부에서 처리)
+        const results = await processBatch(keywords, batchSize, requestInterval, useCache, retryCount);
+        
+        // API 사용 통계 수집
+        const apiUsageStats = {};
+        let retrySuccessCount = 0;
+        let retryFailCount = 0;
+        
+        for (const result of results) {
+            if (result.api_used && !result.fromCache && result.api_used !== '캐시' && result.api_used !== '에러' && result.api_used !== '에러 (재시도 완료)') {
+                apiUsageStats[result.api_used] = (apiUsageStats[result.api_used] || 0) + 1;
+            }
+            // 재시도 통계
+            if (result.error && result.api_used === '에러 (재시도 완료)') {
+                retryFailCount++;
+            }
+        }
+        
+        // 완료
+        const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+        status.textContent = `✅ 완료! ${keywords.length}개 처리됨 (${elapsedTime}초)`;
+        csvBtn.disabled = false;
+        xlsxBtn.disabled = false;
+        batchStatus.style.display = 'none';
+        prog.style.display = 'none';
+        
+        // API 인디케이터 비활성화
+        document.querySelectorAll('.api-indicator').forEach(ind => {
+            ind.classList.remove('active');
+            ind.classList.add('inactive');
+        });
+        
+        // API 사용 통계 표시
+        if (Object.keys(apiUsageStats).length > 0 || errorCount > 0) {
+            const statsText = Object.entries(apiUsageStats)
+                .map(([api, count]) => `${api}: ${count}`)
+                .join(', ');
+            
+            const cacheCount = results.filter(r => r.fromCache).length;
+            const apiCount = results.filter(r => !r.fromCache && r.api_used !== '에러' && r.api_used !== '에러 (재시도 완료)').length;
+            const errorCount = results.filter(r => r.error).length;
+            
+            let alertMessage = `처리 완료! API 호출: ${apiCount}개, 캐시: ${cacheCount}개`;
+            if (errorCount > 0) {
+                alertMessage += `, 에러: ${errorCount}개`;
+                if (retryCount > 0) {
+                    alertMessage += ` (재시도 ${retryCount}회 설정됨)`;
+                }
+            }
+            if (statsText) {
+                alertMessage += ` | API별 사용: ${statsText}`;
+            }
+            
+            showAlert(alertMessage, errorCount > 0 ? 'warning' : 'success');
+        } else {
+            showAlert(`처리 완료! ${keywords.length}개 키워드 처리됨`, 'success');
+        }
+        
+    } catch (err) {
+        console.error('검색 오류:', err);
+        status.textContent = '❌ 오류 발생: ' + err.message;
+        showAlert('오류 발생: ' + err.message, 'danger');
+    } finally {
+        runBtn.disabled = false;
+        loadingIndicator.style.display = 'none';
+        batchStatus.style.display = 'none';
+        await updateCacheInfo();
+    }
+}
+
+// CSV 다운로드
+function downloadCSV() {
+    if (allRows.length === 0) return;
+    
+    const headers = ['키워드', '총검색수', 'PC검색수', '모바일검색수', 'PC클릭수', '모바일클릭수',
+                     'PC_CTR', '모바일_CTR', '평균노출광고수', '경쟁정도', '사용API', '캐시', '에러'];
+    const rows = [headers];
+    
+    allRows.forEach(row => {
+        const pc = parseInt(row.monthlyPcQcCnt) || 0;
+        const mo = parseInt(row.monthlyMobileQcCnt) || 0;
+        const total = pc + mo;
+        
+        rows.push([
+            row.keyword,
+            total,
+            pc,
+            mo,
+            row.monthlyAvePcClkCnt || '',
+            row.monthlyAveMobileClkCnt || '',
+            row.monthlyAvePcCtr || '',
+            row.monthlyAveMobileCtr || '',
+            row.plAvgDepth || '',
+            row.compIdx || '',
+            row.api_used || '',
+            row.fromCache ? 'Y' : 'N',
+            row.error || ''
+        ]);
+    });
+    
+    const csvContent = '\ufeff' + rows.map(row => 
+        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    ).join('\r\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `naver_search_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+}
+
+// Excel 다운로드
+function downloadExcel() {
+    if (allRows.length === 0) return;
+    
+    const wsData = [
+        ['키워드', '총검색수', 'PC검색수', '모바일검색수', 'PC클릭수', '모바일클릭수',
+         'PC_CTR', '모바일_CTR', '평균노출광고수', '경쟁정도', '사용API', '캐시', '에러']
+    ];
+    
+    allRows.forEach(row => {
+        const pc = parseInt(row.monthlyPcQcCnt) || 0;
+        const mo = parseInt(row.monthlyMobileQcCnt) || 0;
+        const total = pc + mo;
+        
+        wsData.push([
+            row.keyword,
+            total,
+            pc,
+            mo,
+            row.monthlyAvePcClkCnt || '',
+            row.monthlyAveMobileClkCnt || '',
+            row.monthlyAvePcCtr || '',
+            row.monthlyAveMobileCtr || '',
+            row.plAvgDepth || '',
+            row.compIdx || '',
+            row.api_used || '',
+            row.fromCache ? 'Y' : 'N',
+            row.error || ''
+        ]);
+    });
+    
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // 열 너비 자동 조정
+    const colWidths = wsData[0].map((_, colIndex) => ({
+        wch: Math.max(...wsData.map(row => 
+            String(row[colIndex] || '').length
+        )) + 2
+    }));
+    ws['!cols'] = colWidths;
+    
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '검색량 데이터');
+    
+    XLSX.writeFile(wb, `naver_search_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// 페이지 로드 시 초기화
+window.addEventListener('DOMContentLoaded', init);
+
+// 시간대별 특별 메시지
+window.addEventListener('DOMContentLoaded', () => {
+    const now = new Date();
+    const hour = now.getHours();
+    const timeMessage = document.getElementById('timeMessage');
+    const timeMessageTitle = document.getElementById('timeMessageTitle');
+    const timeMessageText = document.getElementById('timeMessageText');
+    
+    if ((hour === 18 && now.getMinutes() >= 50) || hour >= 19 || hour < 4) {
+        timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🌙</span>야근 알림';
+        timeMessageText.innerHTML = '야근하시나요?<br>건강 조심하세요!<br>스트레칭하고<br>눈도 쉬어주세요.';
+        timeMessage.classList.add('active');
+    } else if (hour === 12) {
+        timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🍜</span>점심시간';
+        timeMessageText.innerHTML = '곧 점심시간이네요!<br>맛있는 거 드세요!<br>오후도 화이팅!';
+        timeMessage.classList.add('active');
+    }
+});
+
+</script>
+
+<!-- 시간대별 메시지 -->
+<div class="time-message" id="timeMessage">
+    <button class="close-btn" onclick="document.getElementById('timeMessage').classList.remove('active')">×</button>
+    <h3 id="timeMessageTitle"></h3>
+    <p id="timeMessageText"></p>
+</div>
+</body>
+</html>

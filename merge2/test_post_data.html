@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Post Data 테스트</title>
+</head>
+<body>
+    <h2>Post Data 저장/복원 테스트</h2>
+    
+    <div style="margin: 20px; padding: 20px; border: 1px solid #ccc;">
+        <h3>1. iframe 접근 테스트</h3>
+        <button onclick="testIframeAccess()">iframe 접근 테스트</button>
+        <pre id="iframe-result"></pre>
+    </div>
+    
+    <div style="margin: 20px; padding: 20px; border: 1px solid #ccc;">
+        <h3>2. Post Data 수동 저장</h3>
+        <input type="text" id="test-store-name" placeholder="매장 이름" style="width: 200px;">
+        <input type="text" id="test-store-info" placeholder="매장 정보" style="width: 300px;">
+        <button onclick="savePostData()">저장 테스트</button>
+        <pre id="save-result"></pre>
+    </div>
+    
+    <div style="margin: 20px; padding: 20px; border: 1px solid #ccc;">
+        <h3>3. 프로젝트 목록 확인</h3>
+        <button onclick="loadProjects()">프로젝트 목록 불러오기</button>
+        <pre id="projects-result"></pre>
+    </div>
+
+    <script>
+    function testIframeAccess() {
+        const result = document.getElementById('iframe-result');
+        try {
+            const postIframe = parent.document.querySelector('iframe[src*="post"]');
+            if (postIframe) {
+                result.textContent = "iframe 찾음: " + postIframe.src + "\n";
+                
+                try {
+                    const postDoc = postIframe.contentDocument || postIframe.contentWindow.document;
+                    const storeNameEl = postDoc.getElementById('store-name');
+                    const storeInfoEl = postDoc.getElementById('store-info');
+                    
+                    result.textContent += "store-name 요소: " + (storeNameEl ? "있음" : "없음") + "\n";
+                    result.textContent += "store-info 요소: " + (storeInfoEl ? "있음" : "없음") + "\n";
+                    
+                    if (storeNameEl) {
+                        result.textContent += "store-name 값: " + storeNameEl.value + "\n";
+                    }
+                    if (storeInfoEl) {
+                        result.textContent += "store-info 값: " + storeInfoEl.value + "\n";
+                    }
+                } catch (e) {
+                    result.textContent += "iframe 내부 접근 실패: " + e.message + "\n";
+                    result.textContent += "\n대안: postMessage 사용 필요\n";
+                }
+            } else {
+                result.textContent = "iframe을 찾을 수 없습니다.";
+            }
+        } catch (e) {
+            result.textContent = "오류: " + e.message;
+        }
+    }
+    
+    async function savePostData() {
+        const result = document.getElementById('save-result');
+        const storeName = document.getElementById('test-store-name').value;
+        const storeInfo = document.getElementById('test-store-info').value;
+        
+        const projectData = {
+            name: 'test_post_data_' + Date.now(),
+            categories: [
+                { name: "외부", defaultCount: 5, enabled: true },
+                { name: "내부", defaultCount: 6, enabled: true }
+            ],
+            category_preview_counts: { "외부": 5, "내부": 6 },
+            selected_images: [],
+            thumbnail_size: 100,
+            category_counter: 2,
+            post_data: {
+                storeName: storeName,
+                storeInfo: storeInfo
+            }
+        };
+        
+        try {
+            const response = await fetch('./api/projects.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(projectData)
+            });
+            
+            const data = await response.json();
+            result.textContent = JSON.stringify(data, null, 2);
+        } catch (e) {
+            result.textContent = "오류: " + e.message;
+        }
+    }
+    
+    async function loadProjects() {
+        const result = document.getElementById('projects-result');
+        try {
+            const response = await fetch('./api/projects.php');
+            const data = await response.json();
+            
+            if (data.success) {
+                let output = "프로젝트 목록:\n\n";
+                data.data.forEach(project => {
+                    output += "이름: " + project.name + "\n";
+                    if (project.post_data) {
+                        output += "  - storeName: " + (project.post_data.storeName || '없음') + "\n";
+                        output += "  - storeInfo: " + (project.post_data.storeInfo || '없음') + "\n";
+                    } else {
+                        output += "  - post_data: 없음\n";
+                    }
+                    output += "\n";
+                });
+                result.textContent = output;
+            } else {
+                result.textContent = "오류: " + data.message;
+            }
+        } catch (e) {
+            result.textContent = "오류: " + e.message;
+        }
+    }
+    </script>
+</body>
+</html>

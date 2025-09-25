@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>웹 도구 선택</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        /* 비밀번호 화면 스타일 */
+        #passwordScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 99999;
+        }
+        
+        .password-container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .password-container h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        
+        .password-container .lock-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .password-input-group {
+            margin-bottom: 20px;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1em;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s ease;
+            text-align: center;
+        }
+        
+        .password-input:focus {
+            border-color: #667eea;
+        }
+        
+        .password-submit {
+            width: 100%;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .password-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .password-error {
+            color: #e74c3c;
+            margin-top: 15px;
+            font-size: 0.95em;
+            display: none;
+        }
+        
+        .password-error.show {
+            display: block;
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        
+        #mainContent {
+            display: none;
+        }
+        
+        #mainContent.authenticated {
+            display: block;
+        }
+        /* 이스터에그 스타일 */
+        @keyframes rainbow {
+            0% { background: linear-gradient(135deg, #ff0000 0%, #ff7f00 100%); }
+            14% { background: linear-gradient(135deg, #ff7f00 0%, #ffff00 100%); }
+            28% { background: linear-gradient(135deg, #ffff00 0%, #00ff00 100%); }
+            42% { background: linear-gradient(135deg, #00ff00 0%, #0000ff 100%); }
+            57% { background: linear-gradient(135deg, #0000ff 0%, #4b0082 100%); }
+            71% { background: linear-gradient(135deg, #4b0082 0%, #9400d3 100%); }
+            85% { background: linear-gradient(135deg, #9400d3 0%, #ff0000 100%); }
+            100% { background: linear-gradient(135deg, #ff0000 0%, #ff7f00 100%); }
+        }
+        
+        .secret-button {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            background: transparent;
+            border: none;
+            cursor: default;
+            z-index: 9999;
+        }
+        
+        .container.konami-activated {
+            animation: rainbow 2s linear infinite;
+        }
+        
+        .matrix-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+            display: none;
+        }
+        
+        .matrix-rain.active {
+            display: block;
+        }
+        
+        .time-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            padding: 30px 35px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            z-index: 10001;
+            display: none;
+            max-width: 350px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        .time-message.active {
+            display: block;
+        }
+        
+        .time-message .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            background: none;
+            border: none;
+            padding: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .time-message .close-btn:hover {
+            color: #333;
+            transform: scale(1.1);
+        }
+        
+        .time-message h3 {
+            margin: 0 0 15px 0;
+            font-size: 21px;
+            line-height: 1.4;
+            text-align: center;
+        }
+        
+        .time-message p {
+            font-size: 17px;
+            line-height: 1.8;
+            margin: 0;
+            color: #555;
+            text-align: center;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: gradientShift 10s ease infinite;
+            position: relative;
+        }
+
+        @keyframes gradientShift {
+            0% { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+            50% { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); }
+            100% { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.8s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .tool-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .button {
+            display: block;
+            padding: 20px 30px;
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 1.2em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .button:hover::before {
+            left: 100%;
+        }
+
+        .button-rank {
+            background: linear-gradient(45deg, #f093fb, #f5576c);
+        }
+
+        .button-merge {
+            background: linear-gradient(45deg, #4facfe, #00f2fe);
+        }
+        
+        .button-post {
+            background: linear-gradient(135deg, #03C75A 0%, #02a849 100%);
+        }
+        
+        .button-search {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+        }
+
+        .tool-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .tool-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.5;
+            margin: 15px 0;
+        }
+
+        .features {
+            text-align: left;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #555;
+        }
+
+        .features ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .features li {
+            margin: 5px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        
+        .badge-ai {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .badge-new {
+            background: #dc3545;
+        }
+
+        .badge-sql {
+            background: #007bff;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .button {
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+        }
+        
+        /* 좌측 네비게이션 메뉴 스타일 */
+        .nav-sidebar {
+            position: fixed;
+            left: calc(50% - 350px);
+            top: 50%;
+            transform: translateX(-100%) translateY(-50%);
+            margin-left: -20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 180px;
+            text-align: center;
+        }
+        
+        .nav-sidebar h3 {
+            font-size: 0.9em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .nav-sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .nav-sidebar li {
+            margin: 8px 0;
+        }
+        
+        .nav-sidebar a {
+            text-decoration: none;
+            color: #666;
+            font-size: 0.85em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 8px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .nav-sidebar a:hover {
+            background: rgba(103, 126, 234, 0.1);
+            color: #667eea;
+        }
+        
+        .nav-sidebar a.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 500;
+        }
+        
+        .nav-sidebar .nav-icon {
+            margin-right: 6px;
+            font-size: 1.1em;
+        }
+        
+        /* 화면 크기에 따른 조정 */
+        @media (max-width: 1200px) {
+            .nav-sidebar {
+                left: 20px;
+                transform: translateX(0) translateY(-50%);
+                margin-left: 0;
+            }
+        }
+        
+        /* 모바일에서 네비게이션 숨기기 */
+        @media (max-width: 768px) {
+            .nav-sidebar {
+                display: none;
+            }
+        }
+        
+        /* 스크롤 시 배경 고정 */
+        body.scrollable {
+            min-height: auto;
+            align-items: flex-start;
+            padding: 50px 0;
+        }
+                padding: 18px 25px;
+                font-size: 1.1em;
+            }
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .footer p {
+            margin: 5px 0;
+        }
+
+        .tech-stack {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tech-badge {
+            background: #f0f0f0;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- 비밀번호 화면 -->
+    <div id="passwordScreen">
+        <div class="password-container">
+            <div class="lock-icon">🔒</div>
+            <h2><strong>접근 권한 필요</strong></h2>
+            <div class="password-input-group">
+                <input type="password" 
+                       id="passwordInput" 
+                       class="password-input" 
+                       placeholder="비밀번호를 입력하세요"
+                       autocomplete="off">
+            </div>
+            <button id="passwordSubmit" class="password-submit">확인</button>
+            <div id="passwordError" class="password-error">
+                비밀번호가 일치하지 않습니다.
+            </div>
+        </div>
+    </div>
+    
+    <!-- 메인 콘텐츠 (비밀번호 인증 후 표시) -->
+    <div id="mainContent">
+        <!-- 좌측 네비게이션 메뉴 -->
+    <nav class="nav-sidebar">
+        <h3>🧭 빠른 이동</h3>
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #e0e0e0;">
+        <ul>
+            <li>
+                <a href="#tool-rank" class="nav-link">
+                    <span class="nav-icon">📊</span>
+                    순위 체크
+                </a>
+            </li>
+            <li>
+                <a href="#tool-merge" class="nav-link">
+                    <span class="nav-icon">🖼️</span>
+                    사진 분류
+                </a>
+            </li>
+            <li>
+                <a href="#tool-post" class="nav-link">
+                    <span class="nav-icon">✍️</span>
+                    원고 작성
+                </a>
+            </li>
+            <li>
+                <a href="#tool-search" class="nav-link">
+                    <span class="nav-icon">🔍</span>
+                    검색량 조회
+                </a>
+            </li>
+            <li>
+                <a href="#tool-seo" class="nav-link">
+                    <span class="nav-icon">⌨️</span>
+                    SEO 콘텐츠
+                </a>
+            </li>
+            <li>
+                <a href="#tool-mix" class="nav-link">
+                    <span class="nav-icon">🔀</span>
+                    키워드 조합
+                </a>
+            </li>
+            <li>
+                <a href="#tool-report" class="nav-link">
+                    <span class="nav-icon">📄</span>
+                    분석 보고서
+                </a>
+            </li>
+        </ul>
+    </nav>
+    
+    <div class="container">
+        <h1>🚀 <strong>웹 도구 선택</strong></h1>
+        <p class="subtitle">사용하실 도구를 선택해주세요</p>
+        
+        <div class="button-container">
+            <div class="tool-card" id="tool-rank">
+                <div class="tool-icon">📊</div>
+                <div class="tool-title">
+                    네이버 블로그 노출 체크
+                    <span class="badge">API</span>
+                </div>
+                <p class="description">
+                    블로그 노출 순위를 실시간 분석하고 데이터로 내보냅니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>실시간 순위 확인</li>
+                        <li>키워드별 분석</li>
+                        <li>노출 현황 리포트</li>
+                    </ul>
+                </div>
+                <a href="rank/" class="button button-rank">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-merge">
+                <div class="tool-icon">🖼️✍️</div>
+                <div class="tool-title">
+                    사진 분류 + 원고 AI
+                    <span class="badge badge-sql">SQL</span>
+                    <span class="badge badge-ai">AI</span>
+                    <span class="badge">API</span>
+                </div>
+                <p class="description">
+                    포스팅 사진을 효율적으로 분류하고 원고를 발행합니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>드래그 앤 드롭 업로드</li>
+                        <li>카테고리별 자동 분류</li>
+                        <li>SQL 데이터베이스 저장</li>
+                        <li>이미지 리사이징 최적화</li>
+                        <li>이미지 기반 원고 작성 AI 연동</li>
+                    </ul>
+                </div>
+                <a href="merge2/" class="button button-merge">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-post">
+                <div class="tool-icon">✍️</div>
+                <div class="tool-title">
+                    블로그 요식업 원고 작성 AI
+                    <span class="badge badge-ai">AI</span>
+                    <span class="badge">API</span>
+                </div>
+                <p class="description">
+                    AI가 자동으로 네이버 블로그 포스트를 작성해드립니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>Claude AI 기반 작성</li>
+                        <li>1750자 이상 고품질 원고</li>
+                        <li>SEO 최적화</li>
+                        <li>이미지 자동 배치</li>
+                        <li>"맛집" 리뷰 특화</li>
+                    </ul>
+                </div>
+                <a href="post/" class="button button-post">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-search">
+                <div class="tool-icon">🔍</div>
+                <div class="tool-title">
+                    네이버 검색량 조회
+                    <span class="badge">API</span>
+                </div>
+                <p class="description">
+                    네이버 키워드 검색량을 대량으로 조회하고 분석합니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>대량 키워드 동시 처리</li>
+                        <li>PC/모바일 검색량 분석</li>
+                        <li>경쟁도 및 CTR 데이터</li>
+                        <li>Excel/CSV 내보내기</li>
+                        <li>배치 처리 및 재시도 지원</li>
+                    </ul>
+                </div>
+                <a href="search/" class="button button-search">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-seo">
+                <div class="tool-icon">⌨️</div>
+                <div class="tool-title">
+                    바이럴 SEO 콘텐츠 생성 AI
+                    <span class="badge badge-ai">AI</span>
+                    <span class="badge">API</span>
+                </div>
+                <p class="description">
+                    네이버 상위 노출 최적화 포스트와 이미지를 생성합니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>Gemini AI 기반 콘텐츠 생성</li>
+                        <li>PEXEL API 기반 원고에 맞는 이미지 생성</li>
+                        <li>SEO 최적화 블로그 포스트</li>
+                        <li>수십개 원고 동시 발행</li>
+                        <li>엑셀 csv를 이용한 다수 키워드 import 지원</li>
+                    </ul>
+                </div>
+                <a href="keyword/" class="button button-keyword" style="background: linear-gradient(45deg, #8e44ad, #9b59b6);">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-mix">
+                <div class="tool-icon">🔀</div>
+                <div class="tool-title">
+                    키워드 조합기
+                    <span class="badge badge-new">NEW</span>
+                </div>
+                <p class="description">
+                    다양한 키워드를 조합하여 새로운 키워드 세트를 생성합니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>최대 5개 키워드 그룹 입력</li>
+                        <li>2~4개 조합 패턴 선택</li>
+                        <li>공백 추가 옵션</li>
+                        <li>결과 복사 및 다운로드</li>
+                        <li>실시간 조합 생성</li>
+                    </ul>
+                </div>
+                <a href="mix/" class="button button-mix" style="background: linear-gradient(45deg, #e74c3c, #e67e22);">
+                    시작하기 →
+                </a>
+            </div>
+            
+            <div class="tool-card" id="tool-report">
+                <div class="tool-icon">📄</div>
+                <div class="tool-title">
+                    키워드 분석 보고서
+                    <span class="badge badge-new">NEW</span>
+                </div>
+                <p class="description">
+                    네이버 키워드 검색량 데이터를 전문 보고서로 생성합니다.
+                </p>
+                <div class="features">
+                    <ul>
+                        <li>엑셀 데이터 직접 붙여넣기</li>
+                        <li>자동 검색량 순위 정렬</li>
+                        <li>통계 자동 계산</li>
+                        <li>Excel 파일 내보내기</li>
+                        <li>전문 보고서 디자인</li>
+                    </ul>
+                </div>
+                <a href="report/" class="button button-report" style="background: linear-gradient(45deg, #6c63ff, #4834d4);">
+                    시작하기 →
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><br><br><strong>버전 정보</strong></p>
+            <p>📊 Rank v12.3.5 | 🖼️ Merge v21.1.0 SQL | ✍️ Post v4.1.0 AI</p>
+            <p>🔍 Search v3.0.0 API | ⌨️ SEO v5.2.0 AI | 🔀 Mix v1.0.0</p>
+            <p>📄 Report v1.0.0</p>
+            <p style="margin-top: 10px; font-size: 0.85em;">최종 업데이트: 2025.09.22</p><br>
+            <div class="tech-stack">
+                <span class="tech-badge">HTML5</span>
+                <span class="tech-badge">CSS3</span>
+                <span class="tech-badge">JavaScript</span>
+                <span class="tech-badge">PHP</span>
+                <span class="tech-badge">MySQL</span>
+            </div>
+            <div class="tech-stack">
+                <span class="tech-badge">GEMINI API</span>
+                <span class="tech-badge">PEXELS API</span>
+                <span class="tech-badge">NAVER API</span>
+            </div>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+            <div class="tech-stack">
+                <span class="tech-badge">Node.js</span>
+            </div>
+            <div class="tech-stack" style="margin-top: 10px;">
+                <span class="tech-badge" style="background: #68a063; color: white;">npm: express</span>
+                <span class="tech-badge" style="background: #68a063; color: white;">npm: cors</span>
+                <span class="tech-badge" style="background: #68a063; color: white;">npm: axios</span>
+                <span class="tech-badge" style="background: #68a063; color: white;">npm: dotenv</span>
+                <span class="tech-badge" style="background: #68a063; color: white;">npm: multer</span>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 스크롤 시 네비게이션 활성화
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.tool-card');
+            
+            // 페이지 로드 시 body에 scrollable 클래스 추가
+            document.body.classList.add('scrollable');
+            
+            function updateActiveNav() {
+                const scrollPosition = window.scrollY + 100;
+                
+                sections.forEach((section, index) => {
+                    const top = section.offsetTop - 100;
+                    const bottom = top + section.offsetHeight;
+                    
+                    if (scrollPosition >= top && scrollPosition < bottom) {
+                        navLinks.forEach(link => link.classList.remove('active'));
+                        navLinks[index].classList.add('active');
+                    }
+                });
+            }
+            
+            // 스크롤 이벤트 리스너
+            window.addEventListener('scroll', updateActiveNav);
+            
+            // 초기 실행
+            updateActiveNav();
+            
+            // 네비게이션 클릭 시 부드러운 스크롤
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <!-- 이스터에그 추가 -->
+    <button class="secret-button" id="secretBtn" title="아무것도 없어요..."></button>
+    <canvas class="matrix-rain" id="matrixCanvas"></canvas>
+    <div class="time-message" id="timeMessage">
+        <button class="close-btn" onclick="document.getElementById('timeMessage').classList.remove('active')">×</button>
+        <h3 id="timeMessageTitle"></h3>
+        <p id="timeMessageText"></p>
+    </div>
+    
+    <script>
+        // 이스터에그 1: 콘솔 메시지
+        console.log('%c🎮 축하합니다! 첫 번째 이스터에그를 발견하셨네요!', 'font-size: 20px; color: #667eea; font-weight: bold;');
+        console.log('%c💡 힌트: Konami Code를 아시나요? (↑↑↓↓←→←→BA)', 'font-size: 14px; color: #764ba2;');
+        console.log('%c🔍 더 찾아보세요: 페이지 우측 하단을 잘 살펴보세요...', 'font-size: 14px; color: #666;');
+        
+        // 이스터에그 2: Konami Code
+        let konamiCode = [];
+        const konamiPattern = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let konamiActive = false;
+        
+        document.addEventListener('keydown', (e) => {
+            konamiCode.push(e.key);
+            konamiCode = konamiCode.slice(-10);
+            
+            if (JSON.stringify(konamiCode) === JSON.stringify(konamiPattern) && !konamiActive) {
+                konamiActive = true;
+                
+                // 레인보우 텍스트 스타일 추가
+                const style = document.createElement('style');
+                style.id = 'rainbow-text-style';
+                style.innerHTML = `
+                    @keyframes rainbow-text {
+                        0% { color: #ff0000; }
+                        16.66% { color: #ff8800; }
+                        33.33% { color: #ffff00; }
+                        50% { color: #00ff00; }
+                        66.66% { color: #0088ff; }
+                        83.33% { color: #0000ff; }
+                        100% { color: #ff0000; }
+                    }
+                    
+                    .rainbow-text-active * {
+                        animation: rainbow-text 2s linear infinite !important;
+                    }
+                `;
+                document.head.appendChild(style);
+                document.body.classList.add('rainbow-text-active');
+                
+                alert('🌈 Konami Code 활성화! 모든 글씨가 무지개색으로 변합니다!');
+                
+                setTimeout(() => {
+                    document.body.classList.remove('rainbow-text-active');
+                    const rainbowStyle = document.getElementById('rainbow-text-style');
+                    if (rainbowStyle) rainbowStyle.remove();
+                    konamiActive = false;
+                    console.log('🎮 레인보우 효과가 종료되었습니다.');
+                }, 15000);
+            }
+        });
+        
+        // 이스터에그 3: 숨겨진 버튼 (우측 하단)
+        let secretClicks = 0;
+        document.getElementById('secretBtn').addEventListener('click', () => {
+            secretClicks++;
+            if (secretClicks === 3) {
+                alert('🎊 세 번째 클릭! 비밀을 발견하셨습니다!');
+                startMatrixRain();
+            } else if (secretClicks === 1) {
+                console.log('한 번 더...?');
+            } else if (secretClicks === 2) {
+                console.log('거의 다 왔어요!');
+            }
+        });
+        
+        // 이스터에그 4: 매트릭스 효과
+        function startMatrixRain() {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.classList.add('active');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ민컴퍼니민컴퍼니민컴';
+            const fontSize = 14;
+            const columns = canvas.width / fontSize;
+            const drops = [];
+            
+            for (let i = 0; i < columns; i++) {
+                drops[i] = 1;
+            }
+            
+            let matrixInterval = setInterval(() => {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                ctx.fillStyle = '#0F0';
+                ctx.font = fontSize + 'px monospace';
+                
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars[Math.floor(Math.random() * chars.length)];
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }, 35);
+            
+            setTimeout(() => {
+                clearInterval(matrixInterval);
+                canvas.classList.remove('active');
+                secretClicks = 0;
+            }, 5000);
+        }
+        
+        // 이스터에그 5: 시간대별 특별 메시지
+        const now = new Date();
+        const hour = now.getHours();
+        const timeMessage = document.getElementById('timeMessage');
+        const timeMessageTitle = document.getElementById('timeMessageTitle');
+        const timeMessageText = document.getElementById('timeMessageText');
+        
+        if ((hour === 18 && now.getMinutes() >= 50) || hour >= 19 || hour < 4) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🌙</span>야근 알림';
+            timeMessageText.innerHTML = '야근하시나요?<br>건강 조심하세요!<br>스트레칭하고<br>눈도 쉬어주세요.';
+            timeMessage.classList.add('active');
+        } else if (hour === 12) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🍜</span>점심시간';
+            timeMessageText.innerHTML = '곧 점심시간이네요!<br>맛있는 거 드세요!<br>오후도 화이팅!';
+            timeMessage.classList.add('active');
+        }
+        
+        // 이스터에그 6: 빠른 이동 5번 클릭 - 도망치기
+        let quickNavClicks = 0;
+        let quickNavTimer;
+        const navTitle = document.querySelector('.nav-sidebar h3');
+        if (navTitle) {
+            navTitle.style.cursor = 'pointer';
+            navTitle.style.transition = 'transform 1s ease, opacity 1s ease';
+            navTitle.style.position = 'relative';
+            
+            navTitle.addEventListener('click', () => {
+                quickNavClicks++;
+                clearTimeout(quickNavTimer);
+                
+                if (quickNavClicks === 1) {
+                    navTitle.style.transform = 'translateX(-20px)';
+                } else if (quickNavClicks === 2) {
+                    navTitle.style.transform = 'translateX(20px)';
+                } else if (quickNavClicks === 3) {
+                    navTitle.style.transform = 'translateX(-30px) rotate(-5deg)';
+                } else if (quickNavClicks === 4) {
+                    navTitle.style.transform = 'translateX(30px) rotate(5deg)';
+                    console.log('🤔 뭔가 이상한데...?');
+                } else if (quickNavClicks === 5) {
+                    alert('😅 이건 버튼이 아니에요');
+                    console.log('🏃 빠른 이동이 도망갑니다!');
+                    
+                    // 천천히 화면 밖으로 도망치기
+                    navTitle.style.transition = 'transform 2s ease, opacity 2s ease';
+                    navTitle.style.transform = 'translateX(-350px) rotate(-360deg)';
+                    navTitle.style.opacity = '0.3';
+                    
+                    // 4초 후에 반대편에서 돌아오기
+                    setTimeout(() => {
+                        navTitle.style.transition = 'none';
+                        navTitle.style.transform = 'translateX(350px) rotate(360deg)';
+                        navTitle.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            navTitle.style.transition = 'transform 2s ease, opacity 2s ease';
+                            navTitle.style.transform = 'translateX(0) rotate(0)';
+                            navTitle.style.opacity = '1';
+                            console.log('👋 다시 돌아왔어요! 이제 제대로 작동할게요~');
+                            quickNavClicks = 0; // 여기서 리셋
+                        }, 100);
+                    }, 4000);
+                    
+                    return; // 5번째 클릭 후 바로 종료
+                }
+                
+                quickNavTimer = setTimeout(() => {
+                    navTitle.style.transform = 'translateX(0)';
+                    quickNavClicks = 0;
+                }, 2000);
+            });
+        }
+        
+        // 이스터에그 7: tool-icon 도망치기 효과 (15번째에 항복, 간단하게)
+        document.querySelectorAll('.tool-card').forEach(card => {
+            const icon = card.querySelector('.tool-icon');
+            if (!icon) return;
+            
+            let escapeCount = 0;
+            let isEscaping = false;
+            
+            icon.style.transition = 'transform 0.15s ease';
+            icon.style.position = 'relative';
+            icon.style.display = 'inline-block';
+            
+            icon.addEventListener('mouseenter', function(e) {
+                if (isEscaping) return;
+                
+                escapeCount++;
+                
+                // 랜덤한 방향으로 빠르게 도망
+                const randomAngle = Math.random() * Math.PI * 2;
+                const distance = 30 + (escapeCount * 15);
+                const x = Math.cos(randomAngle) * distance;
+                const y = Math.sin(randomAngle) * distance;
+                
+                this.style.transform = `translate(${x}px, ${y}px) scale(0.85)`;
+                
+                if (escapeCount === 3) {
+                    console.log('😮 빠른 반사신경이시네요!');
+                    this.style.transition = 'transform 0.1s ease';
+                }
+                
+                if (escapeCount === 7) {
+                    console.log('🏃‍♂️💨 아이콘이 전속력으로 도망가요!');
+                    this.style.transform += ' rotate(15deg)';
+                }
+                
+                if (escapeCount === 10) {
+                    console.log('😰 아이콘이 지쳐가고 있어요!');
+                    this.style.transition = 'transform 0.08s ease';
+                }
+                
+                if (escapeCount === 13) {
+                    console.log('😵‍💫 거의 다 잡았어요! 조금만 더!');
+                }
+                
+                if (escapeCount >= 15) {
+                    isEscaping = true;
+                    console.log('😵 아이콘이 항복했어요!');
+                    console.log('🏆 대단해요! 15번의 도전 끝에 아이콘을 잡았습니다!');
+                    console.log('🎮 게임이 종료되었습니다. 이제 아이콘이 도망가지 않습니다!');
+                    
+                    // 15번 이상 시도하면 빙글빙글 돌며 항복
+                    this.style.transition = 'transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+                    this.style.transform = 'translate(0, 0) rotate(1440deg) scale(1.5)';
+                    
+                    // 현재 이벤트 리스너 저장
+                    const currentListener = arguments.callee;
+                    
+                    setTimeout(() => {
+                        this.style.transition = 'transform 0.3s ease';
+                        this.style.transform = 'translate(0, 0) rotate(0) scale(1)';
+                        
+                        // 화려한 승리 애니메이션
+                        this.animate([
+                            { transform: 'scale(1) rotate(0)' },
+                            { transform: 'scale(1.5) rotate(180deg)' },
+                            { transform: 'scale(0.8) rotate(360deg)' },
+                            { transform: 'scale(1.2) rotate(540deg)' },
+                            { transform: 'scale(1) rotate(720deg)' }
+                        ], {
+                            duration: 600,
+                            iterations: 1
+                        });
+                        
+                        // 게임 종료 후 이벤트 리스너 제거
+                        setTimeout(() => {
+                            this.removeEventListener('mouseenter', currentListener);
+                            this.style.transition = '';
+                            this.style.position = '';
+                            this.style.display = '';
+                            console.log('✅ 이스터에그가 비활성화되었습니다.');
+                        }, 700);
+                    }, 600);
+                }
+            });
+            
+            icon.addEventListener('mouseleave', function() {
+                // 마우스가 떠나도 원위치로 돌아오지 않음
+                // 아무 동작도 하지 않음
+            });
+        });
+        
+        // 이스터에그 9: 특별한 URL로 접속 시
+        if (window.location.href && !window.location.href.includes('minc.dothome.co.kr')) {
+            console.log('🏠 개발자 모드로 접속하셨네요! 로컬 환경이신가요?');
+            const devBadge = document.createElement('div');
+            devBadge.style.cssText = `
+                position: fixed;
+                top: 10px;
+                left: 10px;
+                background: linear-gradient(45deg, #667eea, #764ba2);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 5px;
+                font-size: 12px;
+                z-index: 10000;
+                animation: pulse 2s infinite;
+            `;
+            devBadge.textContent = '🛠️ DEV MODE';
+            document.body.appendChild(devBadge);
+            
+            // pulse 애니메이션 추가
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes pulse {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.7; }
+                    100% { opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    </script>
+    </div> <!-- mainContent 종료 -->
+    
+    <!-- 비밀번호 인증 스크립트 -->
+    <script>
+        // 비밀번호 설정
+        const CORRECT_PASSWORD = 'mincom0202';
+        
+        // 엔터키 이벤트 처리
+        document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+        
+        // 버튼 클릭 이벤트 처리
+        document.getElementById('passwordSubmit').addEventListener('click', checkPassword);
+        
+        // 비밀번호 확인 함수
+        function checkPassword() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            const errorDiv = document.getElementById('passwordError');
+            
+            if (inputPassword === CORRECT_PASSWORD) {
+                // 비밀번호 맞음
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContent').classList.add('authenticated');
+                
+                // localStorage에 인증 상태 영구 저장 (브라우저 캐시)
+                localStorage.setItem('mincom_authenticated', 'true');
+                localStorage.setItem('mincom_auth_date', new Date().toISOString());
+            } else {
+                // 비밀번호 틀림
+                errorDiv.classList.add('show');
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+                
+                // 3초 후 에러 메시지 숨기기
+                setTimeout(() => {
+                    errorDiv.classList.remove('show');
+                }, 3000);
+            }
+        }
+        
+        // 페이지 로드 시 localStorage 체크
+        window.addEventListener('DOMContentLoaded', function() {
+            // localStorage에 인증 정보가 있으면 바로 접속 (영구 저장)
+            if (localStorage.getItem('mincom_authenticated') === 'true') {
+                document.getElementById('passwordScreen').style.display = 'none';
+                document.getElementById('mainContent').classList.add('authenticated');
+                
+                // 인증 날짜 확인 (선택사항: 30일 후 재인증)
+                const authDate = localStorage.getItem('mincom_auth_date');
+                if (authDate) {
+                    const daysPassed = (new Date() - new Date(authDate)) / (1000 * 60 * 60 * 24);
+                    // 30일이 지났으면 재인증 요구 (필요시 주석 해제)
+                    // if (daysPassed > 30) {
+                    //     localStorage.removeItem('mincom_authenticated');
+                    //     localStorage.removeItem('mincom_auth_date');
+                    //     location.reload();
+                    // }
+                }
+            } else {
+                // 비밀번호 입력 필드에 포커스
+                document.getElementById('passwordInput').focus();
+            }
+        });
+        
+        // 로그아웃 기능 (필요시 사용) - 콘솔에서 실행 가능
+        function logoutMincom() {
+            localStorage.removeItem('mincom_authenticated');
+            localStorage.removeItem('mincom_auth_date');
+            location.reload();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네이버 블로그 SEO 콘텐츠 생성기</title>
+    <link rel="stylesheet" href="./index.css?v=3.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+    .time-message {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 255, 255, 0.98);
+        padding: 30px 35px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        z-index: 10001;
+        display: none;
+        max-width: 350px;
+        animation: slideIn 0.5s ease;
+    }
+    
+    .time-message.active {
+        display: block;
+    }
+    
+    .time-message .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 24px;
+        cursor: pointer;
+        color: #999;
+        background: none;
+        border: none;
+        padding: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .time-message .close-btn:hover {
+        color: #333;
+        transform: scale(1.1);
+    }
+    
+    .time-message h3 {
+        margin: 0 0 15px 0;
+        font-size: 21px;
+        line-height: 1.4;
+        text-align: center;
+    }
+    
+    .time-message p {
+        font-size: 17px;
+        line-height: 1.8;
+        margin: 0;
+        color: #555;
+        text-align: center;
+    }
+    
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    </style>
+    <!-- Babel Standalone for in-browser TSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.sh/@google/genai@^0.14.0",
+          "docx": "https://esm.sh/docx@8.5.0",
+          "jszip": "https://esm.sh/jszip@3.10.1",
+          "xlsx": "https://esm.sh/xlsx@0.18.5"
+        }
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <main>
+        <div id="prompt-form" aria-labelledby="form-heading">
+            <header>
+                <h1><span style="font-size: 1.2em;">⌨️</span> 바이럴 SEO 콘텐츠 생성 AI</h1>
+                <p>키워드와 인기주제를 입력하여 네이버 상위 노출 최적화 블로그 포스트를 생성합니다</p>
+            </header>
+            
+            <h2 id="form-heading" class="sr-only">블로그 포스트 정보</h2>
+            
+            <!-- 탭 메뉴 추가 -->
+            <div class="tab-container">
+                <button class="tab-button active" data-tab="single">단일 생성</button>
+                <button class="tab-button" data-tab="multiple">다중 생성</button>
+            </div>
+            
+            <!-- 단일 생성 탭 내용 -->
+            <div id="single-tab" class="tab-content active">
+                <div class="form-group">
+                    <label for="keyword">키워드</label>
+                    <input type="text" id="keyword" name="keyword" placeholder="예: 강아지 훈련">
+                    <p class="form-hint">블로그 포스트의 메인 키워드를 입력하세요</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="popular-topic">인기주제</label>
+                    <input type="text" id="popular-topic" name="popular-topic" placeholder="예: 말티즈 특징">
+                    <p class="form-hint">네이버에서 인기 있는 주제 키워드를 입력하세요</p>
+                </div>
+                
+                <!-- AI 모델 선택 (단일 생성) -->
+                <div class="form-group">
+                    <label for="ai-model-single">AI 모델 선택</label>
+                    <select id="ai-model-single" name="ai-model-single" 
+                            style="width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (권장)</option>
+                        <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    </select>
+                    <p class="form-hint">속도와 품질을 고려하여 AI 모델을 선택하세요</p>
+                </div>
+                
+                <button type="button" id="generate-button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px 24px; border: none; border-radius: 8px; background: linear-gradient(135deg, #00C73C, #03CF5D); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(0, 199, 60, 0.3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <span class="button-text">콘텐츠 생성하기</span>
+                </button>
+            </div>
+            
+            <!-- 다중 생성 탭 내용 -->
+            <div id="multiple-tab" class="tab-content">
+                <div class="form-group">
+                    <label for="excel-file">엑셀 파일 업로드</label>
+                    <div class="file-upload-area">
+                        <input type="file" id="excel-file" name="excel-file" accept=".xlsx,.xls" style="display: none;">
+                        <button type="button" id="excel-upload-btn" class="file-upload-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            <span>엑셀 파일 선택</span>
+                        </button>
+                        <span id="file-name" class="file-name">파일이 선택되지 않았습니다</span>
+                    </div>
+                    <p class="form-hint">키워드와 인기주제가 포함된 엑셀 파일을 업로드하세요 (최대 30개 항목)</p>
+                </div>
+                
+                <div class="form-group">
+                    <button type="button" id="download-template" class="template-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <path d="M10 12l4 4m0 0l4-4m-4 4V8"></path>
+                        </svg>
+                        <span>엑셀 템플릿 다운로드</span>
+                    </button>
+                    <p class="form-hint">엑셀 템플릿을 다운로드하여 형식에 맞게 작성해주세요</p>
+                </div>
+                
+                <!-- 동시 생성 개수 설정 -->
+                <div class="form-group">
+                    <label for="concurrent-count">동시 생성 개수 설정</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="concurrent-count" name="concurrent-count" 
+                               min="1" max="30" value="10" 
+                               style="width: 100px; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                        <span style="color: #6b7280; font-size: 14px;">개 (1~30)</span>
+                        <button type="button" id="concurrent-preset-5" class="preset-btn" style="padding: 6px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 13px;">5개</button>
+                        <button type="button" id="concurrent-preset-10" class="preset-btn" style="padding: 6px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 13px;">10개</button>
+                        <button type="button" id="concurrent-preset-20" class="preset-btn" style="padding: 6px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 13px;">20개</button>
+                        <button type="button" id="concurrent-preset-30" class="preset-btn" style="padding: 6px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 4px; cursor: pointer; font-size: 13px;">30개</button>
+                    </div>
+                    <p class="form-hint">동시에 처리할 콘텐츠 개수입니다. 숫자가 클수록 빠르지만 오류 가능성이 높아집니다.</p>
+                </div>
+                
+                <!-- AI 모델 선택 -->
+                <div class="form-group">
+                    <label for="ai-model">AI 모델 선택</label>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <select id="ai-model" name="ai-model" 
+                                style="padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 14px; min-width: 200px;">
+                            <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (권장)</option>
+                            <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                        </select>
+                        <div class="model-badges" style="display: flex; gap: 5px;">
+                            <span id="speed-badge" class="badge" style="padding: 2px 8px; background: #10b981; color: white; border-radius: 12px; font-size: 12px;">빠름</span>
+                            <span id="quality-badge" class="badge" style="padding: 2px 8px; background: #3b82f6; color: white; border-radius: 12px; font-size: 12px;">안정적</span>
+                        </div>
+                    </div>
+                    <p class="form-hint" id="model-description">가장 안정적인 Gemini 2.5 Flash 모델입니다. 대량 생성에 적합합니다.</p>
+                </div>
+                
+                <button type="button" id="generate-multiple-button" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px 24px; border: none; border-radius: 8px; background: linear-gradient(135deg, #764ba2, #667eea); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 20px;" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span class="button-text">다중 콘텐츠 생성하기</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 현재 키워드 정보 위젯 -->
+        <div id="keyword-info-widget" class="keyword-info-widget hidden">
+            <div class="keyword-info-header">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>현재 작업 정보</span>
+            </div>
+            <div class="keyword-info-content">
+                <div class="info-item">
+                    <span class="info-label">키워드:</span>
+                    <span id="current-keyword" class="info-value">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">인기주제:</span>
+                    <span id="current-topic" class="info-value">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">작업 상태:</span>
+                    <span id="current-status" class="info-value status-idle">대기중</span>
+                </div>
+            </div>
+        </div>
+
+        <section id="result-section" aria-live="polite">
+            <!-- 키워드 선택 버튼들 (다중 생성시에만 표시) -->
+            <div id="keyword-navigation" class="keyword-nav hidden">
+                <h3>생성된 키워드 목록</h3>
+                <div id="keyword-buttons" class="keyword-buttons"></div>
+            </div>
+            
+            <!-- 섹션 이동 미니 모듈 -->
+            <div class="section-navigator">
+                <button class="section-nav-btn" data-target="prompt-form">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
+                    <span>상단</span>
+                </button>
+                <button class="section-nav-btn" data-target="result-section">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                    <span>원고</span>
+                </button>
+                <button class="section-nav-btn" data-target="image-section">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>이미지</span>
+                </button>
+            </div>
+            
+            <h2>생성된 콘텐츠</h2>
+            <div class="result-header">
+                <span id="char-count" aria-label="공백 제외 글자 수">글자수(공백제외): 0</span>
+                <div class="button-group">
+                    <button id="regenerate-button" title="현재 콘텐츠 재생성" class="hidden" style="background: linear-gradient(135deg, #f59e0b, #ef4444); margin-right: 10px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                        </svg>
+                        <span>재생성</span>
+                    </button>
+                    <button id="copy-button" title="클립보드로 복사" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="currentColor"><path d="M0 0h24v24H0z" fill="none"/><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                        <span>복사</span>
+                    </button>
+                    <button id="export-button" title="Word 파일로 내보내기" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="currentColor"><path d="M220-200h520v-240H220v240Zm260-340L280-740h120v-140h160v140h120L480-540ZM140-120q-24 0-42-18t-18-42v-520q0-24 18-42t42-18h400l240 240v340q0 24-18 42t-42 18H140Z"/></svg>
+                        <span>내보내기</span>
+                    </button>
+                </div>
+            </div>
+            <div id="loading" class="hidden">
+                <div class="spinner"></div>
+                <p>AI가 원고를 작성하고 있습니다... 잠시만 기다려주세요.</p>
+            </div>
+            <div id="result" contenteditable="true" role="textbox" aria-multiline="true"></div>
+        </section>
+
+        <section id="image-section" aria-live="polite">
+            <div class="image-header">
+                <h2>관련 이미지 (10개)</h2>
+                <div class="image-controls">
+                    <div class="custom-prompt-container">
+                        <input type="text" id="custom-image-prompt" placeholder="직접 이미지 검색어 입력 (예: cute puppy)" />
+                        <button id="custom-prompt-search" title="커스텀 검색어로 이미지 검색" class="custom-search-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.35-4.35"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <button id="refresh-images" title="이미지 새로고침" class="refresh-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                        <span>새로고침</span>
+                    </button>
+                </div>
+                <p class="custom-prompt-hint">※ 이미지가 맘에 들지 않으면 직접 검색어를 입력해보세요 (영어 권장)</p>
+            </div>
+            <div id="image-gallery" class="image-gallery"></div>
+        </section>
+
+        <section id="download-section">
+            <button id="download-all" class="download-all-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span>원고 + 이미지 통합 다운로드 (ZIP)</span>
+            </button>
+        </section>
+    </main>
+    
+    <!-- 시간대별 메시지 -->
+    <div class="time-message" id="timeMessage">
+        <button class="close-btn" onclick="document.getElementById('timeMessage').classList.remove('active')">×</button>
+        <h3 id="timeMessageTitle"></h3>
+        <p id="timeMessageText"></p>
+    </div>
+    
+    <!-- Babel로 TypeScript 처리 -->
+    <script type="text/babel" data-presets="typescript" data-type="module" src="./index.tsx"></script>
+    
+    <script>
+    // 시간대별 특별 메시지
+    setTimeout(() => {
+        const now = new Date();
+        const hour = now.getHours();
+        const timeMessage = document.getElementById('timeMessage');
+        const timeMessageTitle = document.getElementById('timeMessageTitle');
+        const timeMessageText = document.getElementById('timeMessageText');
+        
+        if ((hour === 18 && now.getMinutes() >= 50) || hour >= 19 || hour < 4) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🌙</span>야근 알림';
+            timeMessageText.innerHTML = '야근하시나요?<br>건강 조심하세요!<br>스트레칭하고<br>눈도 쉬어주세요.';
+            timeMessage.classList.add('active');
+        } else if (hour === 12) {
+            timeMessageTitle.innerHTML = '<span style="font-size: 1.3em; display: block; margin-bottom: 8px;">🍜</span>점심시간';
+            timeMessageText.innerHTML = '곧 점심시간이네요!<br>맛있는 거 드세요!<br>오후도 화이팅!';
+            timeMessage.classList.add('active');
+        }
+    }, 100);
+    </script>
+</body>
+</html>
